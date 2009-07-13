@@ -9,6 +9,8 @@
 #require 'rss'
 
 require 'xmlrpc/client'
+require "net/https"
+require 'openssl'
 require 'pp'
 
 class RedminePlugin < Plugin
@@ -20,6 +22,7 @@ class RedminePlugin < Plugin
   def initialize
   	super
   	
+  	
   	###############
   	##  SETTINGS ##
     ###############
@@ -29,17 +32,13 @@ class RedminePlugin < Plugin
     @redmine_webservice_user = "admin"
     @redmine_webservice_pass = "admin"
 
+
     # Other variables - should not be changed
     @redmine_webservice_path =  "redmine_webservice/api"
     @redmine_issue_show_path = "issues/show"
     @redmine_project_show_path = "projects/show"
     @redmine_rapid_url = @redmine_url_prefixe + @redmine_url_suffixe
-
-	#########################################
-	## Initialisation of the XMLRPC client ##
-	#########################################
-	@redmineserver = XMLRPC::Client.new2( "#{@redmine_url_prefixe}#{@redmine_webservice_user}:#{@redmine_webservice_pass}@#{@redmine_url_suffixe}#{@redmine_webservice_path}" )
-     
+    
   end
   
   # Display the known redmine adress
@@ -299,6 +298,13 @@ class RedminePlugin < Plugin
   
    # Call a method in the redmine webservice
   def redmine_call(m, params)
+  
+  	#########################################
+	## Initialisation of the XMLRPC client ##
+	#########################################
+	@redmineserver = XMLRPC::Client.new2( "#{@redmine_url_prefixe}#{@redmine_webservice_user}:#{@redmine_webservice_pass}@#{@redmine_url_suffixe}#{@redmine_webservice_path}" )
+    @redmineserver.instance_variable_get(:@http).instance_variable_set(:@verify_mode, OpenSSL::SSL::VERIFY_NONE)
+    
   	# recuperation des parametres
   	methods = params[:method]
 			
