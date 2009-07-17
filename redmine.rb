@@ -280,7 +280,7 @@ class RedminePlugin < Plugin
 					mins = (gap/60 % 60).to_i
 					secs = (gap % 60)
 					
-					m.reply "Task ##{task_logger.task} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+					m.reply "Task ##{task_logger.task} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 				end
 				if !task_detected
 					m.reply "sorry I dont know"
@@ -364,7 +364,7 @@ class RedminePlugin < Plugin
 			when "Ticket.FindIssueForUserByProject"
 				for issue in result
 					# display issue information
-					m.reply "Task ##{issue['id']} : [#{issue['project_name']}] #{issue['subject']} (#{issue['priority']}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue['id']}"
+					m.reply "Task ##{issue['id']} : [#{issue['project_name']}] #{issue['subject']} (#{issue['priority']} - #{issue['priority_id']}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue['id']}"
 					pp issue
 				end
 			when "Information.CheckCredentials"
@@ -455,24 +455,27 @@ class RedminePlugin < Plugin
 			if @registry.has_key? certificate[:username]
 				task_counter = []
 				@registry[certificate[:username]].each do |task_logger|
-					if task_logger.task == params[:task]
-
+						# preparation du paramètre durée de tache
 						gap = ( Time.now - task_logger.time ).to_i
 						hours = gap/3600.to_i
 						mins = ( gap/60 % 60 ).to_i
 						secs = ( gap % 60 )
 						real_hours = ( Time.now - task_logger.time )/3600
 						# on met à jour le champ params avant de l'employer
+						params[:task] = task_logger.task
 						params[:username] = certificate[:username]
 						params[:spent_time] = real_hours
 						# appel à la méthode du webservice pour l'ajout de temps pour une tache
-						redmine_add_time_entry(m, params)
-						# affichage d'un message
-						counter_message = "La tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; a duré  #{hours}h #{mins}min et #{secs} secondes => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
-						task_counter.push counter_message
-					end
+						time_entry_added = redmine_add_time_entry(m, params)
+						if time_entry_added
+							# affichage d'un message
+							counter_message = "La tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; a duré  #{hours}h #{mins}min et #{secs} secondes => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+							task_counter.push counter_message
+						else
+							counter_message = "La tâche ##{task_logger.task} n'a pas été mise à jour, le compteur n'a pas été stoppé (problème lors de l'enregistrement)"
+						end
 				end
-				if !task_counter.empty?
+				if (!task_counter.empty? and time_entry_added)
 					# on indique à l'utilisateur
 					@bot.say m.replyto, "#{certificate[:username]},  " +
 					  task_counter.join(' ')
@@ -480,7 +483,7 @@ class RedminePlugin < Plugin
 					# --------------------------------------------
 					# on efface la tache enregistrée
 					@registry.delete certificate[:username]
-				else
+				elsif (task_counter.empty?)
 					m.reply "Aucune Tâche en cours"
 				end
 			else
@@ -544,6 +547,47 @@ class RedminePlugin < Plugin
 				
 				# on indique à l'utilisateur
 				@bot.say m.replyto, "#{certificate[:username]},  la tâche #{resulted_task['id']} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task['id']}"
+			else
+				m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
+			end
+		end
+    rescue Exception => e
+      m.reply e.message
+      m.reply e.backtrace.inspect
+    end
+  end
+  
+  # Add time entry to a task
+  def redmine_add_comment(m, params)
+    begin
+    	certificate = redmine_check_auth(m)
+		if ! certificate
+			# ne rien faire, l'utilisateur n'est pas connecté
+		else
+			resulted_task = redmine_check_task(m, params)
+			if resulted_task
+				# on met à jour le champ params avant de l'employer
+				params[:username] = certificate[:username]
+				messageEntry = params[:message].to_s.strip
+				methodparameters	= {
+									:arg0 => params[:task],
+									:arg1 => params[:username],
+									:arg3 => messageEntry
+								}
+				parameters = {
+						  :method => "Ticket.AddCommentForTicket",
+						  :args => methodparameters
+						}
+				# call of the Ticket.AddCommentForTicket method
+				result = redmine_call(m, parameters)
+				
+				if result.nil?
+					# on indique à l'utilisateur
+					@bot.say m.replyto, "#{certificate[:username]},  la tâche #{resulted_task['id']} n'a pas été mise à jour (problèmes lors de l'enregistrement)"
+				else 
+					# on indique à l'utilisateur
+					@bot.say m.replyto, "#{certificate[:username]},  la tâche #{resulted_task['id']} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task['id']}"
+				end
 			else
 				m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
 			end
@@ -648,9 +692,11 @@ class RedminePlugin < Plugin
     when "start"
     	"redmine start <id_task> => Vérifie si la tâche existe, puis lance un compteur personnel"
     when "stop"
-    	"redmine stop <id_task> => Vérifie si la tâche est lancée, puis stoppe le compteur et enregistre le temps dans Redmine"
+    	"redmine stop <message> => Vérifie si une tâche est lancée, puis stoppe le compteur et enregistre le temps et le message dans Redmine"
     when "addtime"
     	"addtime <id_task> <hours> => Vérifie si la tâche existe, puis enregistre les heures dans Redmine"
+    when "addcomment"
+    	"addcomment <id_task> <message> => Vérifie si la tâche existe, puis ajoute un commentaire pour la tâche dans Redmine"
     when "delete"
     	"delete <id_tasks> => supprime le compteur actuel pour la tâche sans publier les heures dans Redmine"
     when "tasks"
@@ -723,15 +769,20 @@ plugin.map 'redmine start :task',
 plugin.map 'start :task',
   :action => 'redmine_counter_start'
   
-plugin.map 'redmine stop :task',
+plugin.map 'redmine stop *message',
   :action => 'redmine_counter_stop'
-plugin.map 'stop :task',
+plugin.map 'stop *message',
   :action => 'redmine_counter_stop'
-  
+
 plugin.map 'redmine addtime :task :hours *message',
   :action => 'redmine_add_time'
 plugin.map 'addtime :task :hours *message',
   :action => 'redmine_add_time'
+  
+plugin.map 'redmine comment :task *message',
+  :action => 'redmine_add_comment'
+plugin.map 'comment :task *message',
+  :action => 'redmine_add_comment'
 
 plugin.map 'redmine delete :task',
   :action => 'redmine_counter_delete'
