@@ -2,11 +2,9 @@
 #
 # Author:: Yohann MONNIER - Internethic
 #
-# Version:: 0.0.1
+# Version:: 0.0.2
 #
 # License:: MIT license
-
-#require 'rss'
 
 require 'xmlrpc/client'
 require "net/https"
@@ -15,30 +13,31 @@ require 'pp'
 
 class RedminePlugin < Plugin
 
-  Redminelogger = Struct.new('Redminelogger', :task, :time, :for, :inprogress, :projectname, :taskname)
+  Redminelogger = Struct.new('Redminelogger', :task, :time, :for, :inprogress, :projectname, :taskname, :alreadydone)
   RedmineAuth = Struct.new('RedmineAuth', :nickname, :username, :password)
   
   # initialize configuration
   def initialize
   	super
   	
-  	
   	###############
   	##  SETTINGS ##
     ###############
     # These five variables are the only you need to set.
-    @redmine_url_prefixe = "http://"
-    @redmine_url_suffixe = "redmine/"
+    @redmine_url_prefixe = "https://"
+    @redmine_url_suffixe = "projets/"
     @redmine_webservice_user = "admin"
     @redmine_webservice_pass = "admin"
-
 
     # Other variables - should not be changed
     @redmine_webservice_path =  "redmine_webservice/api"
     @redmine_issue_show_path = "issues/show"
     @redmine_project_show_path = "projects/show"
     @redmine_rapid_url = @redmine_url_prefixe + @redmine_url_suffixe
-    
+    @redmine_counter_hour_limit = 12
+    @redmine_debug_mode = 0
+
+
   end
   
   # Display the known redmine adress
@@ -156,12 +155,23 @@ class RedminePlugin < Plugin
 
 						if @registry.has_key? authstored[0].username
 							@registry[authstored[0].username].each do |task_logger|
-								gap = (Time.now - task_logger.time).to_i
-								hours = gap/3600.to_i
-								mins = (gap/60 % 60).to_i
-								secs = (gap % 60)
-
-								m.reply "Task ##{task_logger.task} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+								if (task_logger.inprogress == "pause")
+									# preparation du paramètre durée de tache
+									gap = task_logger.alreadydone.to_i
+									hours = gap/3600.to_i
+									mins = ( gap/60 % 60 ).to_i
+									secs = ( gap % 60 )
+									real_hours = ( task_logger.alreadydone )/3600
+									pause_message = "[en pause]"
+								else
+									gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
+									hours = gap/3600.to_i
+									mins = ( gap/60 % 60 ).to_i
+									secs = ( gap % 60 )
+									real_hours = ( Time.now - task_logger.time )/3600
+									pause_message = "[en cours]"
+								end
+								m.reply "Task ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 							end
 						else
 							#@bot.say nickname , "#{Bold}#{nickname}#{Bold}, Tu n'as démarré aucune tâche en ce moment ? Lance le compteur ;) (aide ? => type 'help redmine start')"
@@ -270,24 +280,40 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			m.reply "Today #{certificate[:username]}'s tasks in progress :"
+			m.reply "En ce moment, la tâche en cours de #{certificate[:username]} est :"
 			if @registry.has_key? certificate[:username]
 				task_detected = false
 				@registry[certificate[:username]].each do |task_logger|
 					task_detected = true
-					gap = (Time.now - task_logger.time).to_i
-					hours = gap/3600.to_i
-					mins = (gap/60 % 60).to_i
-					secs = (gap % 60)
+						if (task_logger.inprogress == "pause")
+							# preparation du paramètre durée de tache
+							gap = task_logger.alreadydone.to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							real_hours = ( task_logger.alreadydone )/3600
+							pause_message = "[en pause]"
+						else
+							gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							real_hours = ( Time.now - task_logger.time )/3600
+							pause_message = "[en cours]"
+						end
 					
-					m.reply "Task ##{task_logger.task} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+					m.reply "Task ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 				end
 				if !task_detected
-					m.reply "sorry I dont know"
+					if @redmine_debug_mode == 1
+						m.reply "Aucune tâche en cours"
+					end
 				end
 				
 			else
-				m.reply "sorry I dont know"
+				#if @redmine_debug_mode == 1
+					m.reply "Aucune tâche en cours"
+				#end
 			end
 		end
     rescue Exception => e
@@ -312,7 +338,8 @@ class RedminePlugin < Plugin
 	arg0 = ""
 	arg1 = ""
 	arg2 = ""
-	arg3 = ""
+	arg3 = ""	
+	arg4 = ""
 	
      if ! params[:args].nil?
      	if ! params[:args][:arg0].nil?
@@ -327,16 +354,20 @@ class RedminePlugin < Plugin
      	if ! params[:args][:arg3].nil?
      		arg3  = params[:args][:arg3]
      	end
+     	if ! params[:args][:arg4].nil?
+     		arg4  = params[:args][:arg4]
+     	end
      end
+    
 	if params[:debug] == "true"
 		# liste des parametres
      	pp params[:args]
-		m.reply "arg0 : [#{arg0}], arg1 : [#{arg1}], arg2 : [#{arg2}], arg3 : [#{arg3}]."  
+		m.reply "arg0 : [#{arg0}], arg1 : [#{arg1}], arg2 : [#{arg2}], arg3 : [#{arg3}], arg4 : [#{arg4}]." 
 	end
 		
 	begin
 		# appel à la méthode passée en paramètre
-		result = @redmineserver.call( methods , arg0, arg1, arg2, arg3 )
+		result = @redmineserver.call( methods , arg0, arg1, arg2, arg3, arg4 )
 	rescue Exception => e  
 			m.reply e.message  
 			m.reply "Nom methode: '" + methods + "'"
@@ -373,11 +404,13 @@ class RedminePlugin < Plugin
 					#m.reply "result is [#{result}]"
 			when "Information.GetVersion"
 					# display auth result
-					m.reply "Versions => Redmine[#{result[0]}], Ruby[#{result[1]}], RedmineServices[#{result[2]}]"
+					m.reply "Versions => Redmine[#{result[0]}], Ruby[#{result[1]}], RedmineServices[#{result[2]}], Temps limite compteur[#{@redmine_counter_hour_limit}h]"
 					true
 			when "Ticket.FindTicketById"
 					# display task result
-					m.reply "La tâche #{result['id']} existe dans Redmine"
+					if @redmine_debug_mode == 1
+						m.reply "La tâche #{result['id']} existe dans Redmine"
+					end
 					return result
 			else
 					#m.reply "No method to display this result"
@@ -431,9 +464,9 @@ class RedminePlugin < Plugin
 				resulted_task = redmine_check_task(m, params)
 				if resulted_task
 					tasktostore = Array.new
-					tasktostore.push Redminelogger.new(params[:task], Time.now, certificate[:username], "true", resulted_task['project_name'], resulted_task['subject'] )
+					tasktostore.push Redminelogger.new(params[:task], Time.now, certificate[:username], "true", resulted_task['project_name'], resulted_task['subject'], 0 )
 					@registry[certificate[:username]] = tasktostore
-					m.reply "#{certificate[:username]} commence la tâche ##{params[:task]} à #{Time.now.strftime('%H:%M')} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+					m.reply "#{certificate[:username]} commence la tâche ##{params[:task]} [#{resulted_task['project_name']}][#{Bold}#{resulted_task['subject']}#{Bold}] à #{Time.now.strftime('%H:%M')} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
 				else
 					m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
 				end
@@ -444,6 +477,15 @@ class RedminePlugin < Plugin
     end
   end
 
+  # Fonction qui force l'arret d'une tache d'un développeur
+  def redmine_force_stop(m, params)
+  	if m.source.botuser.owner?
+		redmine_counter_stop(m, params)
+  	else
+		m.reply "Tu ne dispose pas des droits nécessaires"
+  	end
+  end
+
   # Count time stop
   def redmine_counter_stop(m, params)
     begin
@@ -451,43 +493,72 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-				
-			if @registry.has_key? certificate[:username]
+			time_entry_added = false
+			counter_time_limit = false	
+			if params[:othername]
+				user_login = params[:othername]
+			else
+				user_login = certificate[:username]
+			end
+			if @registry.has_key? user_login
 				task_counter = []
-				@registry[certificate[:username]].each do |task_logger|
+				@registry[user_login].each do |task_logger|
 						# preparation du paramètre durée de tache
-						gap = ( Time.now - task_logger.time ).to_i
-						hours = gap/3600.to_i
-						mins = ( gap/60 % 60 ).to_i
-						secs = ( gap % 60 )
-						real_hours = ( Time.now - task_logger.time )/3600
-						# on met à jour le champ params avant de l'employer
-						params[:task] = task_logger.task
-						params[:username] = certificate[:username]
-						params[:spent_time] = real_hours
-						# appel à la méthode du webservice pour l'ajout de temps pour une tache
-						time_entry_added = redmine_add_time_entry(m, params)
-						if time_entry_added
-							# affichage d'un message
-							counter_message = "La tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; a duré  #{hours}h #{mins}min et #{secs} secondes => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
-							task_counter.push counter_message
+						if (task_logger.inprogress == "pause")
+							# preparation du paramètre durée de tache
+							gap = task_logger.alreadydone.to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							real_hours = ( task_logger.alreadydone )/3600
 						else
-							counter_message = "La tâche ##{task_logger.task} n'a pas été mise à jour, le compteur n'a pas été stoppé (problème lors de l'enregistrement)"
+							gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
+							gapreal = ( ( Time.now - task_logger.time ) + task_logger.alreadydone )
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							real_hours = gapreal/3600
+						end
+						
+						# on met à jour le champ params avant de s'en servir
+						params[:task] = task_logger.task
+						params[:username] = user_login
+						params[:spent_time] = real_hours
+						# if counter time limit has been reached, it is erased and not save in redmine 
+						if (gap < @redmine_counter_hour_limit*3600)
+
+							# appel à la méthode du webservice pour l'ajout de temps pour une tache
+							time_entry_added = redmine_add_time_entry(m, params)
+							if time_entry_added
+								# affichage d'un message
+								counter_message = "La tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; a duré  #{hours}h #{mins}min et #{secs} secondes => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+								task_counter.push counter_message
+							else
+								counter_message = "La tâche ##{task_logger.task} n'a pas été mise à jour, le compteur n'a pas été stoppé (problème lors de l'enregistrement)"
+							end
+						else
+							counter_time_limit = true
+							counter_message = "#{Bold}La tâche ##{task_logger.task}[débutée le #{task_logger.time.strftime('%d/%m/%Y à %H:%M')}] n'a pas été mise à jour car le compteur a dépassé #{@redmine_counter_hour_limit} heures (#{hours}h #{mins}min et #{secs} secs).#{Bold} Le compteur a été supprimé, si vous voulez quand même enregistrer ce temps, faites le dans redmine : #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+							task_counter.push counter_message
 						end
 				end
-				if (!task_counter.empty? and time_entry_added)
+				if ( !task_counter.empty? and ( time_entry_added or counter_time_limit ) )
 					# on indique à l'utilisateur
-					@bot.say m.replyto, "#{certificate[:username]},  " +
+					@bot.say m.replyto, "#{user_login},  " +
 					  task_counter.join(' ')
 					# on enregistre les temps dans Redmine données dans Redmine
 					# --------------------------------------------
 					# on efface la tache enregistrée
-					@registry.delete certificate[:username]
+					@registry.delete user_login
 				elsif (task_counter.empty?)
-					m.reply "Aucune Tâche en cours"
+					if @redmine_debug_mode == 1
+						m.reply "Aucune Tâche en cours"
+					end
 				end
 			else
-				m.reply "Aucune Tâche en cours"
+				if @redmine_debug_mode == 1
+					m.reply "Aucune Tâche en cours"
+				end				
 			end
 		end
     rescue Exception => e
@@ -495,7 +566,83 @@ class RedminePlugin < Plugin
       m.reply e.backtrace.inspect
     end
   end
+  
+  # Fonction qui stoppe la tache en cours et ouvre la nouvelle
+  def redmine_start_stop(m, params)
+  	  redmine_counter_stop(m, params)
+  	  params[:task] = params[:task_to_start]
+  	  redmine_counter_start(m, params)
+  end
+  
+  # Count time pause/play
+  def redmine_pause(m, params)
+    begin
+    	certificate = redmine_check_auth(m)
+		if ! certificate
+			# ne rien faire, l'utilisateur n'est pas connecté
+		else
+			if  @registry.has_key? certificate[:username]
+				#m.reply "Vous avez une tache en cours #{certificate[:username]}."
+				
+				@registry[certificate[:username]].each do |task_logger|
+					if ( task_logger.inprogress == "true" )
+							# preparation du paramètre durée de tache
+							gap = ( Time.now - task_logger.time ).to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							# enregistrement du temps déjà consommé
+							task_logger.alreadydone = task_logger.alreadydone + gap
+							gap_total = task_logger.alreadydone.to_i
+							hours = gap_total/3600.to_i
+							mins = ( gap_total/60 % 60 ).to_i
+							secs = ( gap_total % 60 )
+							# mise en pause de la tache
+							task_logger.inprogress = "pause"
+							# enregistrement de l'état de la tâche
+							@registry[certificate[:username]] = task_logger
+							# enregistrement de l'état de la tâche
+							tasktostore = Array.new
+							tasktostore.push task_logger
+							@registry[certificate[:username]] = tasktostore
+							# affichage d'un message
+							m.reply "Mise en pause de la tâche ##{task_logger.task}, commencée à #{task_logger.time.strftime('%H:%M')}, Temps total : #{hours}h #{mins}min #{secs}s, en cours => #{task_logger.inprogress}"
+					else 
+							#reprise de la tache
+							task_logger.inprogress = "true"
+							task_logger.time = Time.now
+							# calcul du temps déjà consommé
+							gap = task_logger.alreadydone.to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							# enregistrement de l'état de la tâche
+							tasktostore = Array.new
+							tasktostore.push task_logger
+							@registry[certificate[:username]] = tasktostore
+							# affichage d'un message
+							m.reply "Reprise de la tâche ##{task_logger.task} à #{task_logger.time.strftime('%H:%M')}, Temps total : #{hours}h #{mins}min #{secs}s"
+							
+					end
+				end
+			else
+				m.reply "#{certificate[:username]}: Vous n'avez pas de tâches en cours."
+			end
+      	end
+    rescue Exception => e
+      m.reply "error: #{e.message}"
+    end
+  end
 
+
+  # Fonction qui force la suppression d'une tache d'un développeur
+  def redmine_force_delete(m, params)
+  	if m.source.botuser.owner?
+		redmine_counter_delete(m, params)
+  	else
+		m.reply "Tu ne dispose pas des droits nécessaires"
+  	end
+  end
+  
   # Delete Logged Time for a task
   def redmine_counter_delete(m, params)
     begin
@@ -503,23 +650,35 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			if @registry.has_key? certificate[:username]
+			if params[:othername]
+				user_login = params[:othername]
+			else
+				user_login = certificate[:username]
+			end
+			if @registry.has_key? user_login
 				# j'affiche un message listant tous les temps effacés
-				@registry[certificate[:username]].each do |task_logger|
-					if task_logger.task == params[:task]
-						gap = ( Time.now - task_logger.time ).to_i
-						hours = gap/3600.to_i
-						mins = ( gap/60 % 60 ).to_i
-						secs = ( gap % 60 )
-						real_hours = ( Time.now - task_logger.time )/3600
+				@registry[user_login].each do |task_logger|
+						if (task_logger.inprogress == "pause")
+							# preparation du paramètre durée de tache
+							gap = task_logger.alreadydone.to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							real_hours = ( task_logger.alreadydone )/3600
+						else
+							gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
+							hours = gap/3600.to_i
+							mins = ( gap/60 % 60 ).to_i
+							secs = ( gap % 60 )
+							real_hours = ( Time.now - task_logger.time )/3600
+						end
 						# affichage d'un message
 						m.reply "Les temps enregistrés pour la tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; étaient :  #{hours}h #{mins}min et #{secs} secondes soit #{real_hours}h (décimal)"
-					end
 				end
 				# on indique à l'utilisateur
 				@bot.say m.replyto, "#{certificate[:username]},  je viens d'effacer ces heures, n'oublis pas de reporter les heures effectuées. Tape 'help redmine addtime'."
 				# on efface la tache enregistrée
-				@registry.delete certificate[:username]
+				@registry.delete user_login
 			else
 				m.reply "Aucune Tâche en cours"
 			end
@@ -608,11 +767,18 @@ class RedminePlugin < Plugin
     	else
     		messageEntry =  "Mis à jour par Webservice"
     	end 
+    	if ( messageEntry == "Mis à jour par Webservice" )
+    		params[:make_a_comment] = 0
+    	else
+    		params[:make_a_comment] = 1
+    	end
+    	
 		methodparameters	= {
 							:arg0 => params[:task],
 							:arg1 => params[:username],
 							:arg2 => params[:spent_time],
-							:arg3 => messageEntry
+							:arg3 => messageEntry,
+							:arg4 => params[:make_a_comment]
 						}
 		parameters = {
 				  :method => "Ticket.AddTimeEntryForTicket",
@@ -656,11 +822,20 @@ class RedminePlugin < Plugin
 					if @registry.has_key? redmine_username
 						# j'affiche un message listant tous les temps effacés
 						@registry[redmine_username].each do |task_logger|
-								gap = ( Time.now - task_logger.time ).to_i
+							if (task_logger.inprogress == "pause")
+								# preparation du paramètre durée de tache
+								gap = task_logger.alreadydone.to_i
 								hours = gap/3600.to_i
 								mins = ( gap/60 % 60 ).to_i
 								secs = ( gap % 60 )
-								real_hours = ( Time.now - task_logger.time )/3600
+								real_hours = ( task_logger.alreadydone )/3600
+							else
+								gap = ( Time.now - task_logger.time ).to_i  + task_logger.alreadydone.to_i
+								hours = gap/3600.to_i
+								mins = ( gap/60 % 60 ).to_i
+								secs = ( gap % 60 )
+								real_hours = ( Time.now - task_logger.time + task_logger.alreadydone)/3600
+							end
 								# affichage d'un message
 								m.reply "Les temps enregistrés pour la tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; étaient :  #{hours}h #{mins}min et #{secs} secondes soit #{real_hours}h (décimal)"
 						end
@@ -686,17 +861,17 @@ class RedminePlugin < Plugin
     when "address"
     	"redmine address => Donne l'adresse du serveur Redmine, les versions de Redmine, Ruby et de Redmine Connector"
     when "connect"
-    	"redmine connect <username> <password> => valide puis associe le couple 'nom d'utilisateur/mot de passe' avec le nom irc de l'utilisateur"
+    	"connect <username> <password> => valide puis associe le couple 'nom d'utilisateur/mot de passe' avec le nom irc de l'utilisateur"
 	when "disconnect"
-    	"redmine disconnect => désassocie le couple 'nom d'utilisateur/mot de passe' du nom irc de l'utilisateur" 
+    	"disconnect => désassocie le couple 'nom d'utilisateur/mot de passe' du nom irc de l'utilisateur" 
     when "start"
-    	"redmine start <id_task> => Vérifie si la tâche existe, puis lance un compteur personnel"
+    	"start <id_task> *<message> => Ferme la tache en cours avec le message optionnel en commentaire, puis Vérifie si la tâche existe, et lance le compteur personnel"
     when "stop"
-    	"redmine stop <message> => Vérifie si une tâche est lancée, puis stoppe le compteur et enregistre le temps et le message dans Redmine"
+    	"stop <message> => Vérifie si une tâche est lancée, puis stoppe le compteur et enregistre le temps et le message dans Redmine"
     when "addtime"
-    	"addtime <id_task> <hours> => Vérifie si la tâche existe, puis enregistre les heures dans Redmine"
-    when "addcomment"
-    	"addcomment <id_task> <message> => Vérifie si la tâche existe, puis ajoute un commentaire pour la tâche dans Redmine"
+    	"addtime <id_task> <hours> *<message> => Vérifie si la tâche existe, puis enregistre les heures dans Redmine. Le message n'est pas obligatoire."
+    when "comment"
+    	"comment <id_task> <message> => Vérifie si la tâche existe, puis ajoute un commentaire pour la tâche dans Redmine"
     when "delete"
     	"delete <id_tasks> => supprime le compteur actuel pour la tâche sans publier les heures dans Redmine"
     when "tasks"
@@ -704,21 +879,32 @@ class RedminePlugin < Plugin
 	when "redmine tasks"
 		"redmine tasks => Liste les tâches ouvertes qui vous sont assignées dans Redmine"
     else
-    	"type 'help redmine adress|connect|disconnect|start|stop|addtime|tasks' to have further informations"
+    	"type 'help redmine adress|connect|disconnect|start|stop|addtime|comment|tasks' to have further informations"
     end
   end
   
   # Fonction de test
   def redmine_test(m, params)
   	# Raccourci pour appel de fonction non configuré
+
   end
+  
+   # Fonction cachée 42 pour délirer
+  def answer_forty_two(m, params)
+  	# Raccourci pour appel de fonction non configuré
+	@bot.say m.replyto, "the answer to life the universe and everything ?"
+	@bot.say m.replyto, "..."
+	@bot.say m.replyto, "..."
+	@bot.say m.replyto, "..."
+	@bot.say m.replyto, " = 42 !"
+  end 
+  
 
 end
 
 plugin = RedminePlugin.new
 
-plugin.map 'redmine test :test',
-  :action => 'redmine_test'
+
   
 plugin.map 'redmine address',
   :action => 'redmine_address'
@@ -764,32 +950,53 @@ plugin.map 'redmine call :method *debug',
 plugin.map 'call :method *debug',
   :action => 'redmine_call'
   
-plugin.map 'redmine start :task',
-  :action => 'redmine_counter_start'
-plugin.map 'start :task',
-  :action => 'redmine_counter_start'
+plugin.map 'redmine start :task_to_start *message',
+  :action => 'redmine_start_stop',
+  :defaults => {:message => "Mis à jour par Webservice"}
+plugin.map 'start :task_to_start *message',
+  :action => 'redmine_start_stop',
+  :defaults => {:message => "Mis à jour par Webservice"}
+  
+plugin.map 'pause',
+  :action => 'redmine_pause'
+plugin.map 'clope',
+  :action => 'redmine_pause'
   
 plugin.map 'redmine stop *message',
-  :action => 'redmine_counter_stop'
+  :action => 'redmine_counter_stop',
+  :defaults => {:message => "Mis à jour par Webservice"}
 plugin.map 'stop *message',
-  :action => 'redmine_counter_stop'
+  :action => 'redmine_counter_stop',
+  :defaults => {:message => "Mis à jour par Webservice"}
+  
+plugin.map 'force stop :othername *message',
+  :action => 'redmine_force_stop',
+  :defaults => {:message => "Mis à jour par Webservice"} 
 
 plugin.map 'redmine addtime :task :hours *message',
-  :action => 'redmine_add_time'
+  :action => 'redmine_add_time',
+  :defaults => {:message => "Mis à jour par Webservice"}
 plugin.map 'addtime :task :hours *message',
-  :action => 'redmine_add_time'
+  :action => 'redmine_add_time',
+  :defaults => {:message => "Mis à jour par Webservice"}
   
 plugin.map 'redmine comment :task *message',
   :action => 'redmine_add_comment'
 plugin.map 'comment :task *message',
   :action => 'redmine_add_comment'
 
-plugin.map 'redmine delete :task',
+plugin.map 'redmine delete',
   :action => 'redmine_counter_delete'
-plugin.map 'delete :task',
+plugin.map 'delete',
   :action => 'redmine_counter_delete'
+  
+plugin.map 'force delete :othername',
+  :action => 'redmine_force_delete'
 
 plugin.map 'redmine kill :username',
   :action => 'redmine_kick'
 plugin.map 'kill :username',
   :action => 'redmine_kick'
+  
+plugin.map 'the answer to life the universe and everything',
+  :action => 'answer_forty_two'
