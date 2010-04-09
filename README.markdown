@@ -12,10 +12,24 @@ Yohann Monnier - Internethic - http://www.internethic.com
 Dependencies
 ------------
 
+Redmine version 0.9.3+
+
+
+
+Version 0.0.6
+-------------
+
+- use the new Rest API from Redmine
+- some hidden features ;)
+
+|
+|
+|
+
+Old versions Dependencies
+-------------------------
+
 Works only if you have installed [redmine_webservice plugin](http://github.com/YohannsMonnier/redmine_webservice/tree/master)  on your redmine server.
-
-
-
 
 Version 0.0.2
 -------------
