@@ -1,60 +1,181 @@
-# :title: Authentified Webservice Client for Redmine
+# :title: Rbot Authentified REST Client for Redmine
 #
 # Author:: Yohann MONNIER - Internethic
 #
-# Version:: 0.0.2
+# Version:: 0.0.6
+#
+# This version will only work with the trunk version of Redmine (>0.9.3)
 #
 # License:: MIT license
 
-require 'xmlrpc/client'
-require "net/https"
+require 'active_resource'
+require 'net/https'
 require 'openssl'
 require 'pp'
+
+# Issue model rbot side
+class ::Issue < ::ActiveResource::Base
+	self.proxy = ''
+	self.timeout = 5
+end
+# Timelog model rbot side
+class ::Timelog < ::ActiveResource::Base
+	self.proxy = ''
+	self.timeout = 5
+end
+# My model rbot side
+class ::My < ::ActiveResource::Base
+	self.collection_name = 'my'
+	self.proxy = ''
+	self.timeout = 5
+end
+# Admin model rbot side
+class ::Admin < ::ActiveResource::Base
+	self.collection_name = 'admin'
+	self.proxy = ''
+	self.timeout = 5
+end
 
 class RedminePlugin < Plugin
 
   Redminelogger = Struct.new('Redminelogger', :task, :time, :for, :inprogress, :projectname, :taskname, :alreadydone)
   RedmineAuth = Struct.new('RedmineAuth', :nickname, :username, :password)
   
-  # initialize configuration
+  # Initialize configuration
   def initialize
   	super
   	
+		###############
+		##  SETTINGS ##
   	###############
-  	##  SETTINGS ##
-    ###############
     # These five variables are the only you need to set.
-    @redmine_url_prefixe = "https://"
-    @redmine_url_suffixe = "projets/"
-    @redmine_webservice_user = "admin"
-    @redmine_webservice_pass = "admin"
+    @redmine_url_prefixe = "http://"
+    @redmine_url_suffixe = "0.0.0.0:3000/"
+    @redmine_webservice_default_user = "admin"
+    @redmine_webservice_default_pass = "admin"
+
 
     # Other variables - should not be changed
-    @redmine_webservice_path =  "redmine_webservice/api"
     @redmine_issue_show_path = "issues/show"
     @redmine_project_show_path = "projects/show"
+    @rbot_connector_version = "0.0.6"
     @redmine_rapid_url = @redmine_url_prefixe + @redmine_url_suffixe
     @redmine_counter_hour_limit = 12
+		@redmine_dev_activity = 9 
     @redmine_debug_mode = 0
-
-
+    
   end
   
+  # Fonction de test
+  def redmine_test(m, params)
+  	# Raccourci pour appel de fonction non configuré
+		begin
+			::Timelog.site = @redmine_rapid_url
+			::Timelog.user = "yohann"
+			::Timelog.password = "monnier"
+
+
+			m.reply "#{Bold}bonjour Maitre ;)#{Bold}"
+
+
+			# Find an entry ==> OK !!
+			m.reply "#{Underline}Récupération d'une Entry... :p#{Underline}"
+			timelogid = 1 
+			timelog = Timelog.find(timelogid)
+			if ! timelog.nil?		
+				m.reply "Timelog [#{timelog.id}] : Temps enregistré => #{timelog.hours.to_s}, Description => #{timelog.comments}"
+			else
+				m.reply "Ce timelog n'existe pas!"
+			end
+
+			## Find an entry ==> OK !!
+			m.reply "#{Underline}Récupération des Time Entries... :p#{Underline}" 
+			timelogs = Timelog.find(:all, :params => { :project_id => "python"})
+			if ! timelogs.nil?		
+				m.reply "Timelogs trouvés [#{timelogs.length}]"
+				#timelogs.each do |timelog|
+    		#	m.reply "Timelog [#{timelog.id}]: Temps enregistré => #{timelog.hours.to_s}" #, Description => #{timelog.comments} "
+    		#end
+			else
+				m.reply "Aucun timelog remonté!"
+			end
+
+			## Save a new time entry  ==> OK !
+			#::Timelog.user = "yohann"
+			#::Timelog.password = "monnier"
+			#newtimelog = Timelog.new(:issue_id => 1, :time_entry=>{:comments => "up", :activity_id =>"8", :hours => "2"})
+			#if newtimelog.save
+			#	m.reply "it works"
+			#else
+			#	m.reply newtimelog.errors.full_messages	
+			#end
+		rescue Exception => e
+			m.reply e.message
+			m.reply e.backtrace.inspect
+    end
+
+  end
+
   # Display the known redmine adress
   def redmine_address(m, params)
   	 begin	
   	 	certificate = redmine_check_auth(m)
 		if ! certificate
-			# ne rien faire, l'utilisateur n'est pas connecté
+			# Dont do anything, user is not connected
 		else
-			m.reply @redmine_rapid_url
-			callparameters  	= {
-									:method => "Information.GetVersion",
-									:args => ""
-								}
-			# call of the Info.check_credentials
-			redmine_call(m, callparameters)
+			m.reply "Adressse : #{@redmine_rapid_url}"
+			# Configuration of the connector
+			::Admin.site = @redmine_rapid_url
+			::Admin.user = @redmine_webservice_default_user
+			::Admin.password = @redmine_webservice_default_pass
+			redmine = Admin.find(:info)
+			m.reply "Version : #{redmine.redmine_version.name}, BDD : #{redmine.db_adapter.name}, Connecteur Rbot : #{@rbot_connector_version} !"
     	end
+    rescue Exception => e
+      m.reply e.message
+      m.reply e.backtrace.inspect
+    end	
+  end
+  
+  def redmine_get_user(username)
+    begin	
+			@registry.keys.each do |key_data|
+				# utilisateurs connectés
+				if key_data.include? "_auth"
+					# recuperons les données de l'utilisateur
+					authstored = @registry[key_data]
+					# Si l'utilisateur est l'utilisateur recherché on renvoi son tableau de valeur
+					if authstored[0].username == username
+						return authstored
+					end
+				end
+			end
+			# Si aucun utilisateur n'a été trouvé, on retourne faux à la fonction appelante
+			return false
+    rescue Exception => e
+      m.reply e.message
+      m.reply e.backtrace.inspect
+    end	
+  end
+
+  def redmine_get_user_list(m)
+    begin	
+			userlist = Hash.new	
+			@registry.keys.each do |key_data|
+				# utilisateurs connectés
+				if key_data.include? "_auth"
+					# recuperons les données de l'utilisateur
+					userdata = @registry[key_data]
+					# Si le login est déjà connu, on ajoute le nickname, sinon on crée une nouvelle cases
+					if  userlist.has_key? userdata[0].username
+							userlist[userdata[0].username][:nickname] = "#{userlist[userdata[0].username][:nickname]}, #{userdata[0].nickname}"
+					else
+							userlist[userdata[0].username] = {:nickname => userdata[0].nickname, :firtone => userdata[0].nickname}
+					end
+				end
+			end
+			# Retourne la liste des utilisateurs redmine
+			return userlist
     rescue Exception => e
       m.reply e.message
       m.reply e.backtrace.inspect
@@ -64,27 +185,20 @@ class RedminePlugin < Plugin
   # Check authentification in Redmine in order to authentify User in Redmine Bot system
   def redmine_connect(m, params)
   	begin
-  		methodparameters	= {
-  								:arg0 => params[:user],
- 								:arg1 => params[:password]
-  							}
- 		callparameters  	= {
- 							  	:method => "Information.CheckCredentials",
- 							  	:args => methodparameters
-							}
-    	#---- call of the Info.check_credentials
-    	result = redmine_call(m, callparameters)
-    	# Si le couple user/password est ok
-    	#m.reply result
-    	#pp result
-    	if result.to_s == "true"
+		# Configuration of the connector
+		::My.site = @redmine_rapid_url
+		::My.user = params[:user]
+		::My.password = params[:password]
+		# Looking for this user
+		user = My.find('me')    	
+    	
+    	if ! user.nil?	
     		#on teste si il est déjà authentifié ou non
     		if ! @registry["#{m.sourcenick}_auth"]
 				authtostore = @registry["#{m.sourcenick}_auth"] || Array.new	
 				authtostore.push RedmineAuth.new(m.sourcenick, params[:user], params[:password])
-				@registry["#{m.sourcenick}_auth"] = authtostore
-					
-    			m.reply "Bienvenue #{params[:user]} !"
+				@registry["#{m.sourcenick}_auth"] = authtostore			
+    			m.reply "Bienvenue #{user.firstname.capitalize} #{user.lastname.capitalize} !"
     		else
     			authstored = @registry["#{m.sourcenick}_auth"]
     			m.reply "Désolé #{m.sourcenick}, Vous êtes déjà authentifié en tant que #{authstored[0].username} !"
@@ -135,6 +249,7 @@ class RedminePlugin < Plugin
   end
 	
   # Display the known redmine users
+  # @TODO : Corriger ce système pour n'afficher qu'une par user redmine avec la liste des utilisateurs connectés
   def redmine_users(m, params)
     begin
     	certificate = redmine_check_auth(m)
@@ -143,18 +258,18 @@ class RedminePlugin < Plugin
 		else
 			if m.source.botuser.owner?
 				m.reply "#{Underline}En ce moment, " + m.sourcenick + ", les utilisateurs connectés sont:#{Underline}"
-				
-				@registry.keys.each do |key_data|
-					# utilisateurs connectés
-					if key_data.include? "_auth"
-						# recuperons les données de l'utilisateur
-						authstored = @registry[key_data]
-						nickname = key_data.gsub('_auth', '')
-						# on affiche le nom de l'utilisateur
-						m.reply "#{Bold}#{nickname} as #{authstored[0].username}#{Bold}"
+				# récupération de la liste des utilisateurs
+				list_of_user = redmine_get_user_list(m)
 
-						if @registry.has_key? authstored[0].username
-							@registry[authstored[0].username].each do |task_logger|
+				list_of_user.keys.each do |key_data|
+					# utilisateurs connectés
+						# recuperons les données de l'utilisateur
+						nicknamelist = list_of_user[key_data]
+						# on affiche le nom de l'utilisateur
+						m.reply "#{Bold}#{key_data} as #{nicknamelist[:nickname]}#{Bold}"
+
+						if @registry.has_key? key_data
+							@registry[key_data].each do |task_logger|
 								if (task_logger.inprogress == "pause")
 									# preparation du paramètre durée de tache
 									gap = task_logger.alreadydone.to_i
@@ -171,13 +286,11 @@ class RedminePlugin < Plugin
 									real_hours = ( Time.now - task_logger.time )/3600
 									pause_message = "[en cours]"
 								end
-								m.reply "Task ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+								m.reply "Tâche ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 							end
 						else
-							#@bot.say nickname , "#{Bold}#{nickname}#{Bold}, Tu n'as démarré aucune tâche en ce moment ? Lance le compteur ;) (aide ? => type 'help redmine start')"
 							m.reply "Aucune tâche en cours"
 						end
-					end
 				end
 			else
 				m.reply "Tu ne dispose pas des droits nécessaires"
@@ -225,22 +338,49 @@ class RedminePlugin < Plugin
     end
   end
   
-  # Display the known redmine users
+  # Display the tasks for this user
   def redmine_my_tasks(m, params)
   	begin
 		certificate = redmine_check_auth(m)
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			methodparameters	= {
-								:arg0 => certificate[:username]
-							}
-			changedparameters = {
-								  :method => "Ticket.FindIssueForUser",
-								  :args => methodparameters
-								}
-			# call of the Issue.FindIssueForUser method
-			redmine_call(m, changedparameters)
+			## Loading All issues for this user
+			# Configuration of the connector
+			::Issue.site = @redmine_rapid_url
+			::Issue.user = certificate[:username]
+			::Issue.password = certificate[:password]
+			# Get All Issues for a user
+			issues = Issue.find(:all, :params => { :assigned_to_id => 'me',:set_filter => 1 })
+			issues.each do |issue|
+	    	  # Display Issues one by one
+	    	  redmine_display_an_issue(m, issue)
+	    	end
+		end
+    rescue Exception => e
+      m.reply e.message
+      m.reply e.backtrace.inspect
+    end	
+  end
+  
+  # Display the tasks for this user for one project
+  def redmine_my_tasks_by_project(m, params)
+  	begin
+		certificate = redmine_check_auth(m)
+		if ! certificate
+			# ne rien faire, l'utilisateur n'est pas connecté
+		else
+			## Loading All issues for this user
+			# Configuration of the connector
+			::Issue.site = @redmine_rapid_url
+			::Issue.user = certificate[:username]
+			::Issue.password = certificate[:password]
+			# Get All Issues for a user and for one project
+			issues = Issue.find(:all, :params => { :assigned_to_id => 'me',:set_filter => 1, :project_id => params[:id_project] })
+			issues.each do |issue|
+	    	  # Display Issues one by one
+	    	  redmine_display_an_issue(m, issue)
+	    	end
 		end
     rescue Exception => e
       m.reply e.message
@@ -249,30 +389,24 @@ class RedminePlugin < Plugin
   end
   
   # Display the known redmine users by project
-  def redmine_my_tasks_by_project(m, params)
+  def redmine_display_an_issue(m, issue)
   	begin
-		certificate = redmine_check_auth(m)
-		if ! certificate
-			# ne rien faire, l'utilisateur n'est pas connecté
-		else
-			methodparameters	= {
-								:arg0 => params[:id_project],
-								:arg1 => certificate[:username]
-							}
-			changedparameters = {
-								  :method => "Ticket.FindIssueForUserByProject",
-								  :args => methodparameters
-								}
-			# call of the Issue.FindIssueForUserByProject method
-			redmine_call(m, changedparameters)
-		end
+		m.reply "Tâche ##{issue.id} : [#{issue.project.name}] #{issue.subject} (#{issue.priority.name}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue.id}"
     rescue Exception => e
       m.reply e.message
       m.reply e.backtrace.inspect
     end	
   end
-  
  
+   # Fonction qui force l'arret d'une tache d'un développeur
+  def redmine_force_tasks(m, params)
+  	if m.source.botuser.owner?
+			redmine_tasks(m, params)
+  	else
+			m.reply "Tu ne dispose pas des droits nécessaires"
+  	end
+  end
+  
    # Display the known pending redmine tasks for this user
   def redmine_tasks(m, params)
     begin
@@ -280,10 +414,15 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			m.reply "En ce moment, la tâche en cours de #{certificate[:username]} est :"
-			if @registry.has_key? certificate[:username]
+			if params[:othername]
+				user_login = params[:othername]
+			else
+				user_login = certificate[:username]
+			end
+			m.reply "#{Underline}Tâche en cours de #{user_login} :#{Underline}"
+			if @registry.has_key? user_login
 				task_detected = false
-				@registry[certificate[:username]].each do |task_logger|
+				@registry[user_login].each do |task_logger|
 					task_detected = true
 						if (task_logger.inprogress == "pause")
 							# preparation du paramètre durée de tache
@@ -302,7 +441,7 @@ class RedminePlugin < Plugin
 							pause_message = "[en cours]"
 						end
 					
-					m.reply "Task ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+					m.reply "Tâche ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 				end
 				if !task_detected
 					if @redmine_debug_mode == 1
@@ -321,128 +460,23 @@ class RedminePlugin < Plugin
       m.reply e.backtrace.inspect
     end
   end
-  
-   # Call a method in the redmine webservice
-  def redmine_call(m, params)
-  
-  	#########################################
-	## Initialisation of the XMLRPC client ##
-	#########################################
-	@redmineserver = XMLRPC::Client.new2( "#{@redmine_url_prefixe}#{@redmine_webservice_user}:#{@redmine_webservice_pass}@#{@redmine_url_suffixe}#{@redmine_webservice_path}" )
-    @redmineserver.instance_variable_get(:@http).instance_variable_set(:@verify_mode, OpenSSL::SSL::VERIFY_NONE)
-    
-  	# recuperation des parametres
-  	methods = params[:method]
-			
-	#Initialisation de tous les paramètres
-	arg0 = ""
-	arg1 = ""
-	arg2 = ""
-	arg3 = ""	
-	arg4 = ""
-	
-     if ! params[:args].nil?
-     	if ! params[:args][:arg0].nil?
-     		arg0  = params[:args][:arg0]
-     	end
-     	if ! params[:args][:arg1].nil?
-     		arg1  = params[:args][:arg1]
-     	end
-     	if ! params[:args][:arg2].nil?
-     		arg2  = params[:args][:arg2]
-     	end
-     	if ! params[:args][:arg3].nil?
-     		arg3  = params[:args][:arg3]
-     	end
-     	if ! params[:args][:arg4].nil?
-     		arg4  = params[:args][:arg4]
-     	end
-     end
-    
-	if params[:debug] == "true"
-		# liste des parametres
-     	pp params[:args]
-		m.reply "arg0 : [#{arg0}], arg1 : [#{arg1}], arg2 : [#{arg2}], arg3 : [#{arg3}], arg4 : [#{arg4}]." 
-	end
-		
-	begin
-		# appel à la méthode passée en paramètre
-		result = @redmineserver.call( methods , arg0, arg1, arg2, arg3, arg4 )
-	rescue Exception => e  
-			m.reply e.message  
-			m.reply "Nom methode: '" + methods + "'"
-		if params[:debug] == "true"
-			m.reply e.backtrace.inspect
-		end 
-	end
-
-	# réponse selon méthodes
-	if defined?result 
-		case  methods
-			when "Project.FindAll"
-				for project in result
-					# give project name
-					m.reply "* " + project['name'] + ", " + project['identifier']
-					m.reply "* * #{@redmine_rapid_url}#{@redmine_project_show_path}/" + project['identifier']
-				end
-				pp project
-			when "Ticket.FindIssueForUser"
-				for issue in result
-					# display issue information
-					m.reply "Task ##{issue['id']} : [#{issue['project_name']}] #{issue['subject']} (#{issue['priority']}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue['id']}"
-					pp issue
-				end
-			when "Ticket.FindIssueForUserByProject"
-				for issue in result
-					# display issue information
-					m.reply "Task ##{issue['id']} : [#{issue['project_name']}] #{issue['subject']} (#{issue['priority']} - #{issue['priority_id']}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue['id']}"
-					pp issue
-				end
-			when "Information.CheckCredentials"
-					return result
-					# display auth result
-					#m.reply "result is [#{result}]"
-			when "Information.GetVersion"
-					# display auth result
-					m.reply "Versions => Redmine[#{result[0]}], Ruby[#{result[1]}], RedmineServices[#{result[2]}], Temps limite compteur[#{@redmine_counter_hour_limit}h]"
-					true
-			when "Ticket.FindTicketById"
-					# display task result
-					if @redmine_debug_mode == 1
-						m.reply "La tâche #{result['id']} existe dans Redmine"
-					end
-					return result
-			else
-					#m.reply "No method to display this result"
-					return result
-		end
-	else
-		m.reply "No results..."
-	end
-	
-	# Fin du message
-	m.reply "---------------" 
-
-  end
 
 
- # check if the task given in parameter exists
-  def redmine_check_task(m, params)
-    begin
-		methodparameters	= {
-							:arg0 => params[:task]
-						}
-		parameters = {
-				  :method => "Ticket.FindTicketById",
-				  :args => methodparameters
-				}
-    	# call of the Issue.FindTicketById method
-    	result = redmine_call(m, parameters)
+ # check if the task given in parameter exists in Redmine
+  def redmine_check_task(m, params, certificate)
+    begin   	
+       	## Loading one issue by its id
+		# Configuration of the connector
+		::Issue.site = @redmine_rapid_url
+		::Issue.user = certificate[:username]
+		::Issue.password = certificate[:password]
+		# Get one issue
+		issue = Issue.find(params[:task])
     	
-    	if result.nil?
+    	if issue.nil?
     		return false
     	else 
-    		return result
+    		return issue
     	end
     	
     rescue Exception => e
@@ -461,12 +495,12 @@ class RedminePlugin < Plugin
 			if  @registry[certificate[:username]]
 				m.reply "Vous avez déjà une tache en cours #{certificate[:username]}."
 			else
-				resulted_task = redmine_check_task(m, params)
+				resulted_task = redmine_check_task(m, params, certificate)
 				if resulted_task
 					tasktostore = Array.new
-					tasktostore.push Redminelogger.new(params[:task], Time.now, certificate[:username], "true", resulted_task['project_name'], resulted_task['subject'], 0 )
+					tasktostore.push Redminelogger.new(params[:task], Time.now, certificate[:username], "true", resulted_task.project.name, resulted_task.subject, 0 )
 					@registry[certificate[:username]] = tasktostore
-					m.reply "#{certificate[:username]} commence la tâche ##{params[:task]} [#{resulted_task['project_name']}][#{Bold}#{resulted_task['subject']}#{Bold}] à #{Time.now.strftime('%H:%M')} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+					m.reply "#{certificate[:username]} commence la tâche ##{params[:task]} [#{resulted_task.project.name}][#{Bold}#{resulted_task.subject}#{Bold}] à #{Time.now.strftime('%H:%M')} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
 				else
 					m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
 				end
@@ -496,10 +530,13 @@ class RedminePlugin < Plugin
 			time_entry_added = false
 			counter_time_limit = false	
 			if params[:othername]
-				user_login = params[:othername]
-			else
-				user_login = certificate[:username]
+				certificate[:username] = params[:othername]
+				# Get the data in order to close the task
+				otheruserdata = redmine_get_user( params[:othername] )
+				certificate[:password] = otheruserdata[0].password
 			end
+			# Configuring local params
+			user_login = certificate[:username]
 			if @registry.has_key? user_login
 				task_counter = []
 				@registry[user_login].each do |task_logger|
@@ -510,14 +547,14 @@ class RedminePlugin < Plugin
 							hours = gap/3600.to_i
 							mins = ( gap/60 % 60 ).to_i
 							secs = ( gap % 60 )
-							real_hours = ( task_logger.alreadydone )/3600
+							real_hours = ( task_logger.alreadydone.to_f )/3600.to_f
 						else
 							gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
 							gapreal = ( ( Time.now - task_logger.time ) + task_logger.alreadydone )
 							hours = gap/3600.to_i
 							mins = ( gap/60 % 60 ).to_i
 							secs = ( gap % 60 )
-							real_hours = gapreal/3600
+							real_hours = gapreal.to_f/3600.to_f
 						end
 						
 						# on met à jour le champ params avant de s'en servir
@@ -528,7 +565,7 @@ class RedminePlugin < Plugin
 						if (gap < @redmine_counter_hour_limit*3600)
 
 							# appel à la méthode du webservice pour l'ajout de temps pour une tache
-							time_entry_added = redmine_add_time_entry(m, params)
+							time_entry_added = redmine_add_time_entry(m, params, certificate)
 							if time_entry_added
 								# affichage d'un message
 								counter_message = "La tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; a duré  #{hours}h #{mins}min et #{secs} secondes => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
@@ -546,18 +583,16 @@ class RedminePlugin < Plugin
 					# on indique à l'utilisateur
 					@bot.say m.replyto, "#{user_login},  " +
 					  task_counter.join(' ')
-					# on enregistre les temps dans Redmine données dans Redmine
-					# --------------------------------------------
 					# on efface la tache enregistrée
 					@registry.delete user_login
 				elsif (task_counter.empty?)
 					if @redmine_debug_mode == 1
-						m.reply "Aucune Tâche en cours"
+						m.reply "Aucune tâche en cours"
 					end
 				end
 			else
 				if @redmine_debug_mode == 1
-					m.reply "Aucune Tâche en cours"
+					m.reply "Aucune tâche en cours"
 				end				
 			end
 		end
@@ -582,7 +617,6 @@ class RedminePlugin < Plugin
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
 			if  @registry.has_key? certificate[:username]
-				#m.reply "Vous avez une tache en cours #{certificate[:username]}."
 				
 				@registry[certificate[:username]].each do |task_logger|
 					if ( task_logger.inprogress == "true" )
@@ -696,18 +730,18 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			resulted_task = redmine_check_task(m, params)
+			resulted_task = redmine_check_task(m, params, certificate)
 			if resulted_task
 				# on met à jour le champ params avant de l'employer
 				params[:username] = certificate[:username]
 				params[:spent_time] = params[:hours]
 				# appel à la méthode du webservice pour l'ajout de temps pour une tache
-				redmine_add_time_entry(m, params)
+				redmine_add_time_entry(m, params, certificate)
 				
 				# on indique à l'utilisateur
-				@bot.say m.replyto, "#{certificate[:username]},  la tâche #{resulted_task['id']} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task['id']}"
+				@bot.say m.replyto, "#{certificate[:username]},  la tâche ##{resulted_task.id} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task.id}"
 			else
-				m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
+				m.reply "La tâche ##{params[:task]} n'existe pas dans Redmine"
 			end
 		end
     rescue Exception => e
@@ -716,39 +750,29 @@ class RedminePlugin < Plugin
     end
   end
   
-  # Add time entry to a task
+  # Add a comment on a Redmine task
   def redmine_add_comment(m, params)
     begin
     	certificate = redmine_check_auth(m)
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			resulted_task = redmine_check_task(m, params)
-			if resulted_task
-				# on met à jour le champ params avant de l'employer
-				params[:username] = certificate[:username]
+			resulted_task = redmine_check_task(m, params, certificate)
+			if ! resulted_task.nil?
+				# Best way to save text line
 				messageEntry = params[:message].to_s.strip
-				methodparameters	= {
-									:arg0 => params[:task],
-									:arg1 => params[:username],
-									:arg3 => messageEntry
-								}
-				parameters = {
-						  :method => "Ticket.AddCommentForTicket",
-						  :args => methodparameters
-						}
-				# call of the Ticket.AddCommentForTicket method
-				result = redmine_call(m, parameters)
-				
-				if result.nil?
+				# Ajout d'un commentaire
+				resulted_task.notes = messageEntry	
+				# Save an issue
+				if ! resulted_task.save
 					# on indique à l'utilisateur
-					@bot.say m.replyto, "#{certificate[:username]},  la tâche #{resulted_task['id']} n'a pas été mise à jour (problèmes lors de l'enregistrement)"
+					@bot.say m.replyto, "#{certificate[:username]},  la tâche ##{resulted_task.id} n'a pas été mise à jour (problèmes lors de l'enregistrement)"
 				else 
 					# on indique à l'utilisateur
-					@bot.say m.replyto, "#{certificate[:username]},  la tâche #{resulted_task['id']} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task['id']}"
+					@bot.say m.replyto, "#{certificate[:username]},  la tâche ##{resulted_task.id} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task.id}"
 				end
 			else
-				m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
+				m.reply "La tâche ##{params[:task]} n'existe pas dans Redmine"
 			end
 		end
     rescue Exception => e
@@ -758,41 +782,26 @@ class RedminePlugin < Plugin
   end
   
   # add a time entry on redmine task
-  def redmine_add_time_entry(m, params)
+  def redmine_add_time_entry(m, params, certificate)
     begin
-    
-    	#Initialisation des paramètres
-    	if params[:message]
-    		messageEntry = params[:message].to_s.strip
-    	else
-    		messageEntry =  "Mis à jour par Webservice"
-    	end 
-    	if ( messageEntry == "Mis à jour par Webservice" )
-    		params[:make_a_comment] = 0
-    	else
-    		params[:make_a_comment] = 1
-    	end
-    	
-		methodparameters	= {
-							:arg0 => params[:task],
-							:arg1 => params[:username],
-							:arg2 => params[:spent_time],
-							:arg3 => messageEntry,
-							:arg4 => params[:make_a_comment]
-						}
-		parameters = {
-				  :method => "Ticket.AddTimeEntryForTicket",
-				  :args => methodparameters
-				}
-    	# call of the Ticket.AddTimeEntryForTicket method
-    	result = redmine_call(m, parameters)
-    	
-    	if result.nil?
+     	#Initialisation des paramètres
+     	if params[:message]
+     		messageEntry = params[:message].to_s.strip
+     	else
+     		messageEntry =  "Mis à jour par Webservice"
+     	end 
+		## Save a new time entry
+		# Configuration of the connector
+		::Timelog.site = @redmine_rapid_url
+		::Timelog.user = certificate[:username]
+		::Timelog.password = certificate[:password]
+		# Saving the new timelog
+		newtimelog = Timelog.new(:issue_id => params[:task], :time_entry=>{:comments => messageEntry, :activity_id => @redmine_dev_activity , :hours => params[:spent_time]})
+		if ! newtimelog.save
     		return false
     	else 
     		return true
     	end
-    	
     rescue Exception => e
       m.reply "error: #{e.message}"
     end
@@ -840,7 +849,7 @@ class RedminePlugin < Plugin
 								m.reply "Les temps enregistrés pour la tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; étaient :  #{hours}h #{mins}min et #{secs} secondes soit #{real_hours}h (décimal)"
 						end
 						# on indique à l'utilisateur
-						@bot.say m.replyto, "-> Tâche éffacée"
+						@bot.say m.replyto, "-> Tâche effacée"
 						# on efface la tache enregistrée
 						@registry.delete redmine_username
 
@@ -883,20 +892,16 @@ class RedminePlugin < Plugin
     end
   end
   
-  # Fonction de test
-  def redmine_test(m, params)
-  	# Raccourci pour appel de fonction non configuré
 
-  end
   
-   # Fonction cachée 42 pour délirer
+   # Fonction cachée 42 pour rire
   def answer_forty_two(m, params)
   	# Raccourci pour appel de fonction non configuré
-	@bot.say m.replyto, "the answer to life the universe and everything ?"
-	@bot.say m.replyto, "..."
-	@bot.say m.replyto, "..."
-	@bot.say m.replyto, "..."
-	@bot.say m.replyto, " = 42 !"
+		@bot.say m.replyto, "the answer to life the universe and everything ?"
+		@bot.say m.replyto, "..."
+		@bot.say m.replyto, "..."
+		@bot.say m.replyto, "..."
+		@bot.say m.replyto, " = 42 !"
   end 
   
 
@@ -904,7 +909,9 @@ end
 
 plugin = RedminePlugin.new
 
-
+plugin.map 'test *try',
+  :action => 'redmine_test',
+  :defaults => {:try => "default"}
   
 plugin.map 'redmine address',
   :action => 'redmine_address'
@@ -942,13 +949,15 @@ plugin.map 'my tasks',
 plugin.map 'redmine tasks :id_project',
   :action => 'redmine_my_tasks_by_project'
   
+# This is only for retro compatibility
 plugin.map 'tasks',
   :action => 'redmine_tasks'
+
+plugin.map 'task',
+  :action => 'redmine_tasks'
   
-plugin.map 'redmine call :method *debug',
-  :action => 'redmine_call'
-plugin.map 'call :method *debug',
-  :action => 'redmine_call'
+plugin.map 'force task :othername',
+  :action => 'redmine_force_tasks'
   
 plugin.map 'redmine start :task_to_start *message',
   :action => 'redmine_start_stop',
@@ -993,10 +1002,4 @@ plugin.map 'delete',
 plugin.map 'force delete :othername',
   :action => 'redmine_force_delete'
 
-plugin.map 'redmine kill :username',
-  :action => 'redmine_kick'
-plugin.map 'kill :username',
-  :action => 'redmine_kick'
-  
-plugin.map 'the answer to life the universe and everything',
-  :action => 'answer_forty_two'
+plug
