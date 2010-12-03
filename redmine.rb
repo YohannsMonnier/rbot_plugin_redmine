@@ -43,7 +43,7 @@ class RedminePlugin < Plugin
   
   # Initialize configuration
   def initialize
-  	super  	
+    super  	
     ###############
     ##  SETTINGS ##
     ###############
