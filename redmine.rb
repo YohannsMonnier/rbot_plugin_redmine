@@ -43,11 +43,10 @@ class RedminePlugin < Plugin
   
   # Initialize configuration
   def initialize
-  	super
-  	
-		###############
-		##  SETTINGS ##
-  	###############
+  	super  	
+    ###############
+    ##  SETTINGS ##
+    ###############
     # These five variables are the only you need to set.
     @redmine_url_prefixe = "http://"
     @redmine_url_suffixe = "0.0.0.0:3000/"
