@@ -2,7 +2,7 @@
 #
 # Author:: Yohann MONNIER - Internethic
 #
-# Version:: 0.0.6
+# Version:: 0.9.1
 #
 # This version will only work with the trunk version of Redmine (>0.9.3)
 #
@@ -19,13 +19,17 @@ class ::Issue < ::ActiveResource::Base
 	self.timeout = 5
 end
 # Timelog model rbot side
-class ::Timelog < ::ActiveResource::Base
+class ::TimeEntry < ::ActiveResource::Base
+	self.element_name = 'time_entry'
+  self.collection_name = 'time_entries'		
+	# self.collection_name = 'time_entries'		
 	self.proxy = ''
 	self.timeout = 5
 end
-# My model rbot side
-class ::My < ::ActiveResource::Base
-	self.collection_name = 'my'
+# User model rbot side
+class ::RedmineUser < ::ActiveResource::Base
+	self.element_name = 'users'
+	self.collection_name = 'users'	
 	self.proxy = ''
 	self.timeout = 5
 end
@@ -50,17 +54,17 @@ class RedminePlugin < Plugin
     # These five variables are the only you need to set.
     @redmine_url_prefixe = "http://"
     @redmine_url_suffixe = "0.0.0.0:3000/"
-    @redmine_webservice_default_user = "admin"
-    @redmine_webservice_default_pass = "admin"
+    @redmine_webservice_default_user = "yohann"
+    @redmine_webservice_default_pass = "monnier"
 
 
     # Other variables - should not be changed
     @redmine_issue_show_path = "issues/show"
     @redmine_project_show_path = "projects/show"
-    @rbot_connector_version = "0.0.6"
+    @rbot_connector_version = "0.9.1"
     @redmine_rapid_url = @redmine_url_prefixe + @redmine_url_suffixe
     @redmine_counter_hour_limit = 12
-		@redmine_dev_activity = 9 
+	@redmine_dev_activity = 9 
     @redmine_debug_mode = 0
     
   end
@@ -69,45 +73,9 @@ class RedminePlugin < Plugin
   def redmine_test(m, params)
   	# Raccourci pour appel de fonction non configuré
 		begin
-			::Timelog.site = @redmine_rapid_url
-			::Timelog.user = "yohann"
-			::Timelog.password = "monnier"
 
+				m.reply "No test for now"
 
-			m.reply "#{Bold}bonjour Maitre ;)#{Bold}"
-
-
-			# Find an entry ==> OK !!
-			m.reply "#{Underline}Récupération d'une Entry... :p#{Underline}"
-			timelogid = 1 
-			timelog = Timelog.find(timelogid)
-			if ! timelog.nil?		
-				m.reply "Timelog [#{timelog.id}] : Temps enregistré => #{timelog.hours.to_s}, Description => #{timelog.comments}"
-			else
-				m.reply "Ce timelog n'existe pas!"
-			end
-
-			## Find an entry ==> OK !!
-			m.reply "#{Underline}Récupération des Time Entries... :p#{Underline}" 
-			timelogs = Timelog.find(:all, :params => { :project_id => "python"})
-			if ! timelogs.nil?		
-				m.reply "Timelogs trouvés [#{timelogs.length}]"
-				#timelogs.each do |timelog|
-    		#	m.reply "Timelog [#{timelog.id}]: Temps enregistré => #{timelog.hours.to_s}" #, Description => #{timelog.comments} "
-    		#end
-			else
-				m.reply "Aucun timelog remonté!"
-			end
-
-			## Save a new time entry  ==> OK !
-			#::Timelog.user = "yohann"
-			#::Timelog.password = "monnier"
-			#newtimelog = Timelog.new(:issue_id => 1, :time_entry=>{:comments => "up", :activity_id =>"8", :hours => "2"})
-			#if newtimelog.save
-			#	m.reply "it works"
-			#else
-			#	m.reply newtimelog.errors.full_messages	
-			#end
 		rescue Exception => e
 			m.reply e.message
 			m.reply e.backtrace.inspect
@@ -122,13 +90,13 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# Dont do anything, user is not connected
 		else
-			m.reply "Adressse : #{@redmine_rapid_url}"
-			# Configuration of the connector
-			::Admin.site = @redmine_rapid_url
-			::Admin.user = @redmine_webservice_default_user
-			::Admin.password = @redmine_webservice_default_pass
-			redmine = Admin.find(:info)
-			m.reply "Version : #{redmine.redmine_version.name}, BDD : #{redmine.db_adapter.name}, Connecteur Rbot : #{@rbot_connector_version} !"
+  		m.reply "Adressse : #{@redmine_rapid_url}, Connecteur Rbot : #{@rbot_connector_version} !"
+#			# Configuration of the connector
+#			#			::Admin.site = @redmine_rapid_url
+#			#			::Admin.user = @redmine_webservice_default_user
+#			#			::Admin.password = @redmine_webservice_default_pass
+#			#			redmine = Admin.find(:info)
+#			# m.reply "Version : #{redmine.redmine_version.name}, BDD : #{redmine.db_adapter.name}, Connecteur Rbot : #{@rbot_connector_version} !"
     	end
     rescue Exception => e
       m.reply e.message
@@ -185,27 +153,27 @@ class RedminePlugin < Plugin
   def redmine_connect(m, params)
   	begin
 		# Configuration of the connector
-		::My.site = @redmine_rapid_url
-		::My.user = params[:user]
-		::My.password = params[:password]
+		::RedmineUser.site = @redmine_rapid_url
+		::RedmineUser.user = params[:user]
+		::RedmineUser.password = params[:password]
 		# Looking for this user
-		user = My.find('me')    	
+		user = RedmineUser.find('current')    	
     	
-    	if ! user.nil?	
+    if ! user.nil?	
     		#on teste si il est déjà authentifié ou non
     		if ! @registry["#{m.sourcenick}_auth"]
-				authtostore = @registry["#{m.sourcenick}_auth"] || Array.new	
-				authtostore.push RedmineAuth.new(m.sourcenick, params[:user], params[:password])
-				@registry["#{m.sourcenick}_auth"] = authtostore			
+					authtostore = @registry["#{m.sourcenick}_auth"] || Array.new	
+					authtostore.push RedmineAuth.new(m.sourcenick, params[:user], params[:password])
+					@registry["#{m.sourcenick}_auth"] = authtostore			
     			m.reply "Bienvenue #{user.firstname.capitalize} #{user.lastname.capitalize} !"
     		else
     			authstored = @registry["#{m.sourcenick}_auth"]
     			m.reply "Désolé #{m.sourcenick}, Vous êtes déjà authentifié en tant que #{authstored[0].username} !"
     		end
-    	# Si le couple user/password ne fonctionne pas
-    	else
-    		m.reply "Redmine ne vous connais pas !"
-    	end
+    # Si le couple user/password ne fonctionne pas
+    else
+    	m.reply "Redmine ne vous connais pas !"
+    end
     	
     rescue Exception => e
       m.reply e.message
@@ -791,12 +759,12 @@ class RedminePlugin < Plugin
      	end 
 		## Save a new time entry
 		# Configuration of the connector
-		::Timelog.site = @redmine_rapid_url
-		::Timelog.user = certificate[:username]
-		::Timelog.password = certificate[:password]
+		::TimeEntry.site = @redmine_rapid_url
+		::TimeEntry.user = certificate[:username]
+		::TimeEntry.password = certificate[:password]
 		# Saving the new timelog
-		newtimelog = Timelog.new(:issue_id => params[:task], :time_entry=>{:comments => messageEntry, :activity_id => @redmine_dev_activity , :hours => params[:spent_time]})
-		if ! newtimelog.save
+		newtimeentry = TimeEntry.new(:issue_id => params[:task], :comments => messageEntry, :activity_id =>@redmine_dev_activity, :hours => params[:spent_time])
+		if ! newtimeentry.save
     		return false
     	else 
     		return true
@@ -1001,4 +969,10 @@ plugin.map 'delete',
 plugin.map 'force delete :othername',
   :action => 'redmine_force_delete'
 
-plug
+plugin.map 'redmine kill :username',
+  :action => 'redmine_kick'
+plugin.map 'kill :username',
+  :action => 'redmine_kick'
+  
+plugin.map 'the answer to life the universe and everything',
+  :action => 'answer_forty_two'
