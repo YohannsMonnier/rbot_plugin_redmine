@@ -22,31 +22,31 @@ Version 0.9.1
 Wiki
 ----
 
-Le but de ce projet est de créer un robot IRC capable d'interagir avec Redmine.
+Le but de ce projet est de cr√©er un robot IRC capable d'interagir avec Redmine.
 
-Liste des fonctionnalités
+Liste des fonctionnalit√©s
 --------------------------
-- Identification du développeur
-- Liste des tâches par développeur (ouvertes)
-- Liste des tâches d'un projet
-- Chronomètre par développeur pour minuter les tâches par développeur
+- Identification du d√©veloppeur
+- Liste des t√¢ches par d√©veloppeur (ouvertes)
+- Liste des t√¢ches d'un projet
+- Chronom√®tre par d√©veloppeur pour minuter les t√¢ches par d√©veloppeur
 
 La fonction connect : 
 --------------------
 
-Cette fonction permet de s'identifier à Redmine.
+Cette fonction permet de s'identifier √† Redmine.
 
-Le robot vérifie l'identité de l'utilisateur sur redmine et enregistre la correspondance nickname irc et login redmine.
+Le robot v√©rifie l'identit√© de l'utilisateur sur redmine et enregistre la correspondance nickname irc et login redmine.
 Voici comment utiliser cette fonction :
 
 !connect username password
 
-Il est évidemment conseillé de le faire dans une conversation privée avec votre robot.
+Il est √©videmment conseill√© de le faire dans une conversation priv√©e avec votre robot.
 
 La fonction disconnect : 
 ------------------------
 
-Cette fonction permet d'effacer les informations d'identification, ainsi que les tâches en cours.
+Cette fonction permet d'effacer les informations d'identification, ainsi que les t√¢ches en cours.
 
 Voici comment utiliser cette fonction : 
 
@@ -55,27 +55,27 @@ Voici comment utiliser cette fonction :
 La fonction redmine tasks : 
 ---------------------------
 
-Cette fonction permet de lister les tâche qui sont assignées à l'utilisateur.
+Cette fonction permet de lister les t√¢che qui sont assign√©es √† l'utilisateur.
 
-Sans ajouter de paramètre, on récupère l'ensemble des tâches ouvertes qui nous sont assignées. La fonction peut aussi être utilisée comme ceci !redmine tasks identifiant-projet pour se voir lister l'ensemble des tâches qui sont assignées à l'utilisateur et ouverte pour un projet en particulier, c'est plus rapide quand de nombreux projets sont ouverts.
+Sans ajouter de param√®tre, on r√©cup√®re l'ensemble des t√¢ches ouvertes qui nous sont assign√©es. La fonction peut aussi √™tre utilis√©e comme ceci !redmine tasks identifiant-projet pour se voir lister l'ensemble des t√¢ches qui sont assign√©es √† l'utilisateur et ouverte pour un projet en particulier, c'est plus rapide quand de nombreux projets sont ouverts.
 
 La fonction start : 
 -------------------
 
-Cette fonction ferme la tâche en cours (si une tâche est ouverte) pour ouvrir la nouvelle tâche.
+Cette fonction ferme la t√¢che en cours (si une t√¢che est ouverte) pour ouvrir la nouvelle t√¢che.
 
-La fonction peut être utilisée comme ceci 
+La fonction peut √™tre utilis√©e comme ceci 
 
 !start numTache 
 
-Cependant, si vous fermez une tache , vous pouvez aussi spécifier un message pour le commentaire comme ceci : !start numTache Commentaire Ce commentaire n'est cependant pas obligatoire.
+Cependant, si vous fermez une tache , vous pouvez aussi sp√©cifier un message pour le commentaire comme ceci : !start numTache Commentaire Ce commentaire n'est cependant pas obligatoire.
 
 La fonction pause : 
 -------------------
 
-Cette fonction met en pause la tâche en cours (si une tâche est ouverte).
+Cette fonction met en pause la t√¢che en cours (si une t√¢che est ouverte).
 
-La fonction peut être utilisée comme ceci 
+La fonction peut √™tre utilis√©e comme ceci 
 
 !pause 
 
@@ -83,7 +83,7 @@ La fonction peut être utilisée comme ceci
 La fonction stop : 
 ------------------
 
-cette fonction permet maintenant de fermer automatiquement la tâche en cours, sans avoir à spécifier le numéro de la tâche.
+cette fonction permet maintenant de fermer automatiquement la t√¢che en cours, sans avoir √† sp√©cifier le num√©ro de la t√¢che.
 
 Voici comment utiliser cette fonction : 
 
@@ -94,7 +94,7 @@ Le commentaire n'est pas obligatoire.
 La fonction delete : 
 --------------------
 
-cette fonction permet maintenant de fermer automatiquement la tâche en cours, sans enregistrer le temps dans redmine.
+cette fonction permet maintenant de fermer automatiquement la t√¢che en cours, sans enregistrer le temps dans redmine.
 
 Voici comment utiliser cette fonction : 
 
@@ -104,7 +104,7 @@ Voici comment utiliser cette fonction :
 La fonction tasks : 
 -------------------
 
-Cette fonction permet d'afficher la tâche en cours de l'utilisateur.
+Cette fonction permet d'afficher la t√¢che en cours de l'utilisateur.
 
 Voici comment utiliser cette fonction : 
 
@@ -114,7 +114,7 @@ Voici comment utiliser cette fonction :
 La fonction addtime : 
 ---------------------
 
-cette fonction permet d'ajouter du temps pour un tache, par exemple si on a pas eu le temps de démarrer le compteur et qu'on s'en aperçoit trop tard.
+cette fonction permet d'ajouter du temps pour un tache, par exemple si on a pas eu le temps de d√©marrer le compteur et qu'on s'en aper√ßoit trop tard.
 
 Voici comment utiliser cette fonction : 
 
@@ -126,12 +126,12 @@ Le commentaire n'est pas obligatoire.
 La fonction comment : 
 ---------------------
 
-cette fonction permet de déposer un commentaire pour une tache. Utile lorsque l'on veut donner une information à un collaborateur sur la tâche en cours.
+cette fonction permet de d√©poser un commentaire pour une tache. Utile lorsque l'on veut donner une information √† un collaborateur sur la t√¢che en cours.
 Voici comment utiliser cette fonction : 
 
 !comment numTache Commentaire
 
-Cette fois ci, le message est évidement obligatoire.
+Cette fois ci, le message est √©videment obligatoire.
 
 
 Fonctions administrateur (chef de projet)
@@ -140,31 +140,31 @@ Pour utiliser ces fonctions, il faut s'authentifier en administrateur de Rbot.
 Pour cela, utiliser la fonction auth : 
 
 !auth passwordAdminRbot
-La fonction users : cette fonction liste les utilisateurs connectés, et si ils ont lancé une tâche, affiche la tâche en cours.
+La fonction users : cette fonction liste les utilisateurs connect√©s, et si ils ont lanc√© une t√¢che, affiche la t√¢che en cours.
 Voici comment utiliser cette fonction : 
 
 !users
-La fonction alert users : cette fonction liste les utilisateurs connectés qui n'ont pas lancé de tâche.
-Elle envoi aussi un message d'alerte aux utilisateurs qui n'ont pas lancés de tâche, leur demandant de le faire le plus rapidement possible.
+La fonction alert users : cette fonction liste les utilisateurs connect√©s qui n'ont pas lanc√© de t√¢che.
+Elle envoi aussi un message d'alerte aux utilisateurs qui n'ont pas lanc√©s de t√¢che, leur demandant de le faire le plus rapidement possible.
 Voici comment utiliser cette fonction : 
 
 !alert users
-La fonction force task : cette fonction permet maintenant d'afficher la tâche en cours d'un autre utilisateur.
+La fonction force task : cette fonction permet maintenant d'afficher la t√¢che en cours d'un autre utilisateur.
 Voici comment utiliser cette fonction : 
 
 !force task nom_d_utilisateur
-La fonction force stop : cette fonction permet maintenant de fermer automatiquement la tâche en cours d'un autre utilisateur.
+La fonction force stop : cette fonction permet maintenant de fermer automatiquement la t√¢che en cours d'un autre utilisateur.
 Voici comment utiliser cette fonction : 
 
 !force stop nom_d_utilisateur ou !force stop nom_d_utilisateur Commentaire
 
 Le commentaire n'est pas obligatoire.
-La fonction force delete : cette fonction permet maintenant de fermer automatiquement la tâche en cours d'un autre utilisateur, sans enregistrer le temps dans redmine.
+La fonction force delete : cette fonction permet maintenant de fermer automatiquement la t√¢che en cours d'un autre utilisateur, sans enregistrer le temps dans redmine.
 Voici comment utiliser cette fonction : 
 
 !force delete nom_d_utilisateur
-La fonction kill : cette fonction permet de déconnecter un utilisateur identifié.
-Elle est utile lorsqu'un utilisateur a oublié de fermer sa tâche et/ou de se déconnecter avant de quitter IRC. Elle est généralement utilisée par l'administrateur après qu'il ait lancé une commance "users" pour vérifier que personne n'ait oublié de fermer ses tâches avant de partir le soir. C'est avec le nom IRC que l'on supprime les données d'identification et les tâches de l'utilisateur.
+La fonction kill : cette fonction permet de d√©connecter un utilisateur identifi√©.
+Elle est utile lorsqu'un utilisateur a oubli√© de fermer sa t√¢che et/ou de se d√©connecter avant de quitter IRC. Elle est g√©n√©ralement utilis√©e par l'administrateur apr√®s qu'il ait lanc√© une commance "users" pour v√©rifier que personne n'ait oubli√© de fermer ses t√¢ches avant de partir le soir. C'est avec le nom IRC que l'on supprime les donn√©es d'identification et les t√¢ches de l'utilisateur.
 Voici comment utiliser cette fonction : 
 
 !kill ircUserName
