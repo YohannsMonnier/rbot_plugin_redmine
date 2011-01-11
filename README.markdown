@@ -12,9 +12,12 @@ Yohann Monnier - Internethic - http://www.internethic.com
 Dependencies
 ------------
 
-Redmine version 0.9.3+
+Redmine version 1.1+
 
 
+Version 0.9.1
+-----------
+- use the native REST API of Redmine Without hacks
 
 Version 0.0.6
 -------------
