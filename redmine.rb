@@ -2,9 +2,9 @@
 #
 # Author:: Yohann MONNIER - Internethic
 #
-# Version:: 0.9.1
+# Version:: 0.9.2
 #
-# This version will only work with the trunk version of Redmine (>0.9.3)
+# This version will only work with the lastest release of Redmine (>1.1)
 #
 # License:: MIT license
 
@@ -57,15 +57,112 @@ class RedminePlugin < Plugin
     @redmine_webservice_default_user = "yohann"
     @redmine_webservice_default_pass = "monnier"
 
+		@redmine_rbot_language = "EN" # or FR
 
     # Other variables - should not be changed
     @redmine_issue_show_path = "issues/show"
     @redmine_project_show_path = "projects/show"
-    @rbot_connector_version = "0.9.1"
+    @rbot_connector_version = "0.9.2"
     @redmine_rapid_url = @redmine_url_prefixe + @redmine_url_suffixe
     @redmine_counter_hour_limit = 12
-	@redmine_dev_activity = 9 
+		@redmine_dev_activity = 9 
     @redmine_debug_mode = 0
+		
+		# language
+		if @redmine_rbot_language == "FR"
+		
+			@redmine_test = "mon test"
+			@redmine_l_address = "Adressse"
+			@redmine_l_connector = "Connecteur Rbot"
+			@redmine_l_welcome = "Bienvenue"
+			@redmine_l_sorry= "Désolé"
+			@redmine_l_alreadyknownas = "Vous êtes déjà authentifié en tant que"
+			@redmine_l_redminedoesnotknowyou= "Redmine ne vous connais pas"
+			@redmine_l_byebye = "Aurevoir"
+			@redmine_l_hello = "Bonjour"
+			@redmine_l_pleaseconnect = "veuillez vous authentifier pour accéder à cette fonctionnalité"
+			@redmine_l_rightnow = "En ce moment"
+			@redmine_l_connectedusersare = "les utilisateurs connectés sont"
+			@redmine_l_aka = "as"
+			@redmine_l_pause = "en pause"
+			@redmine_l_running = "en cours"
+			@redmine_l_task = "Tâche"
+			@redmine_l_notaskrunning = "Aucune tâche en cours"
+			@redmine_l_youhavenottherights = "Tu ne dispose pas des droits nécessaires"
+			@redmine_l_usersthatdontruntasksare = "les utilisateurs qui n'ont pas lancé de compteur sont"
+			@redmine_l_youdidnotlaunchtask =	"Tu n'as démarré aucune tâche en ce moment ? Lance le compteur ;) (aide ? => help redmine start)"
+			@redmine_l_currenttaskof =	"Tâche en cours de"
+			@redmine_l_error =	"Erreur"
+			@redmine_l_youhavealreadyarunningtask =	"Vous avez déjà une tache en cours"
+			@redmine_l_thetask = "La tâche"
+			@redmine_l_doesnotexistsinredmine = "n'existe pas dans Redmine"
+			@redmine_l_last = "a duré" #took
+			@redmine_l_hasnotbeenupdated = "n'a pas été mise à jour, le compteur n'a pas été stoppé (problème lors de l'enregistrement)"
+			@redmine_l_startedon = "débutée le" #started on
+			@redmine_l_hasnotbeenupdatedcauseofcounter = "n'a pas été mise à jour car le compteur a dépassé"
+			@redmine_l_updateitinredmine = "Le compteur a été supprimé, si vous voulez quand même enregistrer ce temps, faites le dans redmine"
+			@redmine_l_pausingtask = "Mise en pause de la tâche"
+			@redmine_l_totaltime = "Temps total"
+			@redmine_l_on = "à"
+			@redmine_l_startagain = "Reprise de la tâche"
+			@redmine_l_youhavenotarunningtask =	"Vous n'avez pas de tâches en cours"
+			@redmine_l_timesavedforthistask =	"Les temps enregistrés pour la tâche"
+			@redmine_l_were = "étaient"
+			@redmine_l_ijusterasedthishoursdontforgettoreportit = "je viens d'effacer ces heures, n'oublis pas de reporter les heures effectuées"
+			@redmine_l_hasbeenupdated = "a été mise à jour"
+			@redmine_l_defaultcommentmessage = "Mis à jour par Webservice"
+			@redmine_l_user = "Utilisateur"
+			@redmine_l_erased = "supprimé"
+			@redmine_l_ihavenodataonthisuser = "Je n'ai aucune donnée sur cet utilisateur"
+			@redmine_l_taskerased = "Tâche effacée"
+			@redmine_l_isstarting = "commence la tâche"
+		else
+			@redmine_test = "my test"
+			@redmine_l_address = "Addresss"
+			@redmine_l_connector = "Rbot connector"
+			@redmine_l_welcome = "Welcome"
+			@redmine_l_sorry= "Sorry"
+			@redmine_l_alreadyknownas = "You are already logged in as"
+			@redmine_l_redminedoesnotknowyou= "Redmine does not know you"
+			@redmine_l_byebye = "Bye bye"
+			@redmine_l_hello = "Hello"
+			@redmine_l_pleaseconnect = "Please log in to use this feature"
+			@redmine_l_rightnow = "Right now"
+			@redmine_l_connectedusersare = "Connected users are"
+			@redmine_l_aka = "as"
+			@redmine_l_pause = "pause"
+			@redmine_l_running = "running"
+			@redmine_l_task = "Task"
+			@redmine_l_notaskrunning = "No running task"
+			@redmine_l_youhavenottherights = "You do not have the rights for that"
+			@redmine_l_usersthatdontruntasksare = "User who did not launch timer are"
+			@redmine_l_youdidnotlaunchtask =	"Your did not start a task ? Launch the timer ;) (need help ? => help redmine)"
+			@redmine_l_currenttaskof =	"Current task of"
+			@redmine_l_error =	"Error"
+			@redmine_l_youhavealreadyarunningtask =	"You have already launched a task"
+			@redmine_l_thetask = "The task"
+			@redmine_l_doesnotexistsinredmine = "does not exist in Redmine"
+			@redmine_l_last = "took" #took
+			@redmine_l_hasnotbeenupdated = "have not been updated, the timer has not be stopped"
+			@redmine_l_startedon = "started at" #started on
+			@redmine_l_hasnotbeenupdatedcauseofcounter = "have not been updated, because the timer have overpass"
+			@redmine_l_updateitinredmine = "The timer has been deleted, if you want to save this time entry, do it in Redmine"
+			@redmine_l_pausingtask = "Suspending task"
+			@redmine_l_totaltime = "Total time"
+			@redmine_l_on = "at"
+			@redmine_l_startagain = "Resuming task"
+			@redmine_l_youhavenotarunningtask =	"You do not have a running task"
+			@redmine_l_timesavedforthistask =	"Timelogs for the task"
+			@redmine_l_were = "were"
+			@redmine_l_ijusterasedthishoursdontforgettoreportit = "I erased this time entry, don't forget to report your time in Redmine"
+			@redmine_l_hasbeenupdated = "has been updated"
+			@redmine_l_defaultcommentmessage = "Updated by Webservice"
+			@redmine_l_user = "User"
+			@redmine_l_erased = "deleted"
+			@redmine_l_ihavenodataonthisuser = "I have no data on this user"
+			@redmine_l_taskerased = "Task deleted"
+			@redmine_l_isstarting = "is starting"
+		end
     
   end
   
@@ -74,7 +171,7 @@ class RedminePlugin < Plugin
   	# Raccourci pour appel de fonction non configuré
 		begin
 
-				m.reply "No test for now"
+				m.reply "#{@redmine_test} !"
 
 		rescue Exception => e
 			m.reply e.message
@@ -90,7 +187,7 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# Dont do anything, user is not connected
 		else
-  		m.reply "Adressse : #{@redmine_rapid_url}, Connecteur Rbot : #{@rbot_connector_version} !"
+  		m.reply "#{@redmine_l_address} : #{@redmine_rapid_url}, #{@redmine_l_connector} : #{@rbot_connector_version} !"
 #			# Configuration of the connector
 #			#			::Admin.site = @redmine_rapid_url
 #			#			::Admin.user = @redmine_webservice_default_user
@@ -165,14 +262,14 @@ class RedminePlugin < Plugin
 					authtostore = @registry["#{m.sourcenick}_auth"] || Array.new	
 					authtostore.push RedmineAuth.new(m.sourcenick, params[:user], params[:password])
 					@registry["#{m.sourcenick}_auth"] = authtostore			
-    			m.reply "Bienvenue #{user.firstname.capitalize} #{user.lastname.capitalize} !"
+    			m.reply "#{@redmine_l_welcome} #{user.firstname.capitalize} #{user.lastname.capitalize} !"
     		else
     			authstored = @registry["#{m.sourcenick}_auth"]
-    			m.reply "Désolé #{m.sourcenick}, Vous êtes déjà authentifié en tant que #{authstored[0].username} !"
+    			m.reply "#{@redmine_l_sorry} #{m.sourcenick}, #{@redmine_l_alreadyknownas} #{authstored[0].username} !"
     		end
     # Si le couple user/password ne fonctionne pas
     else
-    	m.reply "Redmine ne vous connais pas !"
+    	m.reply "#{@redmine_l_redminedoesnotknowyou} !"
     end
     	
     rescue Exception => e
@@ -189,7 +286,7 @@ class RedminePlugin < Plugin
 		if ! certificate
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
-			m.reply "Aurevoir #{certificate[:username]}."
+			m.reply "#{@redmine_l_byebye} #{certificate[:username]}."
 			@registry.delete "#{m.sourcenick}_auth"
 		end
     rescue Exception => e
@@ -202,7 +299,7 @@ class RedminePlugin < Plugin
   def redmine_check_auth(m)
   	begin
 		if ! @registry["#{m.sourcenick}_auth"]
-			m.reply "Bonjour #{m.sourcenick}, veuillez vous authentifier pour accéder à cette fonctionnalité."
+			m.reply "#{@redmine_l_hello} #{m.sourcenick}, #{@redmine_l_pleaseconnect}."
 			return false
 		else
 			authstored = @registry["#{m.sourcenick}_auth"]
@@ -224,7 +321,7 @@ class RedminePlugin < Plugin
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
 			if m.source.botuser.owner?
-				m.reply "#{Underline}En ce moment, " + m.sourcenick + ", les utilisateurs connectés sont:#{Underline}"
+				m.reply "#{Underline}#{@redmine_l_rightnow}, " + m.sourcenick + ", #{@redmine_l_connectedusersare}:#{Underline}"
 				# récupération de la liste des utilisateurs
 				list_of_user = redmine_get_user_list(m)
 
@@ -233,7 +330,7 @@ class RedminePlugin < Plugin
 						# recuperons les données de l'utilisateur
 						nicknamelist = list_of_user[key_data]
 						# on affiche le nom de l'utilisateur
-						m.reply "#{Bold}#{key_data} as #{nicknamelist[:nickname]}#{Bold}"
+						m.reply "#{Bold}#{key_data} #{@redmine_l_aka} #{nicknamelist[:nickname]}#{Bold}"
 
 						if @registry.has_key? key_data
 							@registry[key_data].each do |task_logger|
@@ -244,23 +341,23 @@ class RedminePlugin < Plugin
 									mins = ( gap/60 % 60 ).to_i
 									secs = ( gap % 60 )
 									real_hours = ( task_logger.alreadydone )/3600
-									pause_message = "[en pause]"
+									pause_message = "[#{@redmine_l_pause}]"
 								else
 									gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
 									hours = gap/3600.to_i
 									mins = ( gap/60 % 60 ).to_i
 									secs = ( gap % 60 )
 									real_hours = ( Time.now - task_logger.time )/3600
-									pause_message = "[en cours]"
+									pause_message = "[#{@redmine_l_running}]"
 								end
-								m.reply "Tâche ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+								m.reply "#{@redmine_l_task} ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname}(!!) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 							end
 						else
-							m.reply "Aucune tâche en cours"
+							m.reply "#{@redmine_l_notaskrunning}"
 						end
 				end
 			else
-				m.reply "Tu ne dispose pas des droits nécessaires"
+				m.reply "#{@redmine_l_youhavenottherights}"
 			end
 		end
     rescue Exception => e
@@ -277,7 +374,7 @@ class RedminePlugin < Plugin
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
 			if m.source.botuser.owner?
-				m.reply "#{Underline}En ce moment, " + m.sourcenick + ", les utilisateurs qui n'ont pas lancé de compteur sont:#{Underline}"
+				m.reply "#{Underline}#{@redmine_l_rightnow}, " + m.sourcenick + ", #{@redmine_l_usersthatdontruntasksare}:#{Underline}"
 
 				@registry.keys.each do |key_data|
 					# utilisateurs connectés
@@ -289,14 +386,14 @@ class RedminePlugin < Plugin
 						# Si l'utilisateur n'a pas de taches, on lui indique par message
 						if ! @registry.has_key? authstored[0].username
 							# on affiche le nom de l'utilisateur pour l'administrateur
-							m.reply "#{Bold}#{nickname} as #{authstored[0].username}#{Bold} - Aucune tâche en cours"
+							m.reply "#{Bold}#{nickname} #{@redmine_l_aka} #{authstored[0].username}#{Bold} - #{@redmine_l_notaskrunning}"
 							# on envoie le message à l'utilisateur
-							@bot.say nickname , "#{Bold}#{nickname}#{Bold}, Tu n'as démarré aucune tâche en ce moment ? Lance le compteur ;) (aide ? => help redmine start)"
+							@bot.say nickname , "#{Bold}#{nickname}#{Bold}, #{@redmine_l_youdidnotlaunchtask}"
 						end
 					end
 				end
 			else
-				m.reply "Tu ne dispose pas des droits nécessaires"
+				m.reply "#{@redmine_l_youhavenottherights}"
 			end
 		end
     rescue Exception => e
@@ -358,7 +455,7 @@ class RedminePlugin < Plugin
   # Display the known redmine users by project
   def redmine_display_an_issue(m, issue)
   	begin
-		m.reply "Tâche ##{issue.id} : [#{issue.project.name}] #{issue.subject} (#{issue.priority.name}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue.id}"
+		m.reply "#{@redmine_l_task} ##{issue.id} : [#{issue.project.name}] #{issue.subject} (#{issue.priority.name}) => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{issue.id}"
     rescue Exception => e
       m.reply e.message
       m.reply e.backtrace.inspect
@@ -370,7 +467,7 @@ class RedminePlugin < Plugin
   	if m.source.botuser.owner?
 			redmine_tasks(m, params)
   	else
-			m.reply "Tu ne dispose pas des droits nécessaires"
+			m.reply "#{@redmine_l_youhavenottherights}"
   	end
   end
   
@@ -386,7 +483,7 @@ class RedminePlugin < Plugin
 			else
 				user_login = certificate[:username]
 			end
-			m.reply "#{Underline}Tâche en cours de #{user_login} :#{Underline}"
+			m.reply "#{Underline}#{@redmine_l_currenttaskof} #{user_login} :#{Underline}"
 			if @registry.has_key? user_login
 				task_detected = false
 				@registry[user_login].each do |task_logger|
@@ -398,27 +495,27 @@ class RedminePlugin < Plugin
 							mins = ( gap/60 % 60 ).to_i
 							secs = ( gap % 60 )
 							real_hours = ( task_logger.alreadydone )/3600
-							pause_message = "[en pause]"
+							pause_message = "[#{@redmine_l_pause}]"
 						else
 							gap = ( Time.now - task_logger.time ).to_i + task_logger.alreadydone.to_i
 							hours = gap/3600.to_i
 							mins = ( gap/60 % 60 ).to_i
 							secs = ( gap % 60 )
 							real_hours = ( Time.now - task_logger.time )/3600
-							pause_message = "[en cours]"
+							pause_message = "[#{@redmine_l_running}]"
 						end
 					
-					m.reply "Tâche ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
+					m.reply "#{@redmine_l_task} ##{task_logger.task}#{pause_message} (#{hours}h #{mins}m #{secs}s) : [#{task_logger.projectname}] #{task_logger.taskname} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{task_logger.task}"
 				end
 				if !task_detected
 					if @redmine_debug_mode == 1
-						m.reply "Aucune tâche en cours"
+						m.reply "#{@redmine_l_notaskrunning}"
 					end
 				end
 				
 			else
 				#if @redmine_debug_mode == 1
-					m.reply "Aucune tâche en cours"
+					m.reply "#{@redmine_l_notaskrunning}"
 				#end
 			end
 		end
@@ -447,7 +544,7 @@ class RedminePlugin < Plugin
     	end
     	
     rescue Exception => e
-      m.reply "error: #{e.message}"
+      m.reply "#{@redmine_l_error}: #{e.message}"
     end
   end
   
@@ -460,21 +557,21 @@ class RedminePlugin < Plugin
 			# ne rien faire, l'utilisateur n'est pas connecté
 		else
 			if  @registry[certificate[:username]]
-				m.reply "Vous avez déjà une tache en cours #{certificate[:username]}."
+				m.reply "#{@redmine_l_youhavealreadyarunningtask} #{certificate[:username]}."
 			else
 				resulted_task = redmine_check_task(m, params, certificate)
 				if resulted_task
 					tasktostore = Array.new
 					tasktostore.push Redminelogger.new(params[:task], Time.now, certificate[:username], "true", resulted_task.project.name, resulted_task.subject, 0 )
 					@registry[certificate[:username]] = tasktostore
-					m.reply "#{certificate[:username]} commence la tâche ##{params[:task]} [#{resulted_task.project.name}][#{Bold}#{resulted_task.subject}#{Bold}] à #{Time.now.strftime('%H:%M')} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+					m.reply "#{certificate[:username]} #{@redmine_l_isstarting} ##{params[:task]} [#{resulted_task.project.name}][#{Bold}#{resulted_task.subject}#{Bold}] #{@redmine_l_on} #{Time.now.strftime('%H:%M')} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
 				else
-					m.reply "La tâche #{params[:task]} n'existe pas dans Redmine"
+					m.reply "#{@redmine_l_thetask} #{params[:task]} #{@redmine_l_doesnotexistsinredmine}"
 				end
 			end
       	end
     rescue Exception => e
-      m.reply "error: #{e.message}"
+      m.reply "#{@redmine_l_error}: #{e.message}"
     end
   end
 
@@ -483,7 +580,7 @@ class RedminePlugin < Plugin
   	if m.source.botuser.owner?
 		redmine_counter_stop(m, params)
   	else
-		m.reply "Tu ne dispose pas des droits nécessaires"
+		m.reply "#{@redmine_l_youhavenottherights}"
   	end
   end
 
@@ -535,14 +632,14 @@ class RedminePlugin < Plugin
 							time_entry_added = redmine_add_time_entry(m, params, certificate)
 							if time_entry_added
 								# affichage d'un message
-								counter_message = "La tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; a duré  #{hours}h #{mins}min et #{secs} secondes => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+								counter_message = "#{@redmine_l_thetask} ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; #{@redmine_l_last} #{hours}h #{mins}min  #{secs}s => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
 								task_counter.push counter_message
 							else
-								counter_message = "La tâche ##{task_logger.task} n'a pas été mise à jour, le compteur n'a pas été stoppé (problème lors de l'enregistrement)"
+								counter_message = "#{@redmine_l_thetask} ##{task_logger.task} #{@redmine_l_hasnotbeenupdated}"
 							end
 						else
 							counter_time_limit = true
-							counter_message = "#{Bold}La tâche ##{task_logger.task}[débutée le #{task_logger.time.strftime('%d/%m/%Y à %H:%M')}] n'a pas été mise à jour car le compteur a dépassé #{@redmine_counter_hour_limit} heures (#{hours}h #{mins}min et #{secs} secs).#{Bold} Le compteur a été supprimé, si vous voulez quand même enregistrer ce temps, faites le dans redmine : #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
+							counter_message = "#{Bold}#{@redmine_l_thetask} ##{task_logger.task}[#{@redmine_l_startedon} #{task_logger.time.strftime('%d/%m/%Y - %H:%M')}] #{@redmine_l_hasnotbeenupdatedcauseofcounter} #{@redmine_counter_hour_limit}h (#{hours}h #{mins}min et #{secs} secs).#{Bold} #{@redmine_l_updateitinredmine} : #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{params[:task]}"
 							task_counter.push counter_message
 						end
 				end
@@ -554,12 +651,12 @@ class RedminePlugin < Plugin
 					@registry.delete user_login
 				elsif (task_counter.empty?)
 					if @redmine_debug_mode == 1
-						m.reply "Aucune tâche en cours"
+						m.reply "#{@redmine_l_notaskrunning}"
 					end
 				end
 			else
 				if @redmine_debug_mode == 1
-					m.reply "Aucune tâche en cours"
+					m.reply "#{@redmine_l_notaskrunning}"
 				end				
 			end
 		end
@@ -606,7 +703,7 @@ class RedminePlugin < Plugin
 							tasktostore.push task_logger
 							@registry[certificate[:username]] = tasktostore
 							# affichage d'un message
-							m.reply "Mise en pause de la tâche ##{task_logger.task}, commencée à #{task_logger.time.strftime('%H:%M')}, Temps total : #{hours}h #{mins}min #{secs}s, en cours => #{task_logger.inprogress}"
+							m.reply "#{@redmine_l_pausingtask} ##{task_logger.task}, #{@redmine_l_startedon} #{task_logger.time.strftime('%H:%M')}, #{@redmine_l_totaltime} : #{hours}h #{mins}min #{secs}s, #{@redmine_l_running} => #{task_logger.inprogress}"
 					else 
 							#reprise de la tache
 							task_logger.inprogress = "true"
@@ -621,16 +718,16 @@ class RedminePlugin < Plugin
 							tasktostore.push task_logger
 							@registry[certificate[:username]] = tasktostore
 							# affichage d'un message
-							m.reply "Reprise de la tâche ##{task_logger.task} à #{task_logger.time.strftime('%H:%M')}, Temps total : #{hours}h #{mins}min #{secs}s"
+							m.reply "#{@redmine_l_startagain} ##{task_logger.task} #{@redmine_l_on} #{task_logger.time.strftime('%H:%M')}, #{@redmine_l_totaltime} : #{hours}h #{mins}min #{secs}s"
 							
 					end
 				end
 			else
-				m.reply "#{certificate[:username]}: Vous n'avez pas de tâches en cours."
+				m.reply "#{certificate[:username]}: #{@redmine_l_youhavenotarunningtask}."
 			end
       	end
     rescue Exception => e
-      m.reply "error: #{e.message}"
+      m.reply "#{@redmine_l_error}: #{e.message}"
     end
   end
 
@@ -640,7 +737,7 @@ class RedminePlugin < Plugin
   	if m.source.botuser.owner?
 		redmine_counter_delete(m, params)
   	else
-		m.reply "Tu ne dispose pas des droits nécessaires"
+		m.reply "#{@redmine_l_youhavenottherights}"
   	end
   end
   
@@ -674,14 +771,14 @@ class RedminePlugin < Plugin
 							real_hours = ( Time.now - task_logger.time )/3600
 						end
 						# affichage d'un message
-						m.reply "Les temps enregistrés pour la tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; étaient :  #{hours}h #{mins}min et #{secs} secondes soit #{real_hours}h (décimal)"
+						m.reply "#{@redmine_l_timesavedforthistask} ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; #{@redmine_l_were} :  #{hours}h #{mins}min, #{secs}secs"
 				end
 				# on indique à l'utilisateur
-				@bot.say m.replyto, "#{certificate[:username]},  je viens d'effacer ces heures, n'oublis pas de reporter les heures effectuées. Tape 'help redmine addtime'."
+				@bot.say m.replyto, "#{certificate[:username]}, #{@redmine_l_ijusterasedthishoursdontforgettoreportit}."
 				# on efface la tache enregistrée
 				@registry.delete user_login
 			else
-				m.reply "Aucune Tâche en cours"
+				m.reply "#{@redmine_l_notaskrunning}"
 			end
 		end
     rescue Exception => e
@@ -706,9 +803,9 @@ class RedminePlugin < Plugin
 				redmine_add_time_entry(m, params, certificate)
 				
 				# on indique à l'utilisateur
-				@bot.say m.replyto, "#{certificate[:username]},  la tâche ##{resulted_task.id} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task.id}"
+				@bot.say m.replyto, "#{certificate[:username]}, #{@redmine_l_thetask} ##{resulted_task.id} #{@redmine_l_hasbeenupdated} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task.id}"
 			else
-				m.reply "La tâche ##{params[:task]} n'existe pas dans Redmine"
+				m.reply "#{@redmine_l_thetask} ##{params[:task]} #{@redmine_l_doesnotexistsinredmine}"
 			end
 		end
     rescue Exception => e
@@ -733,13 +830,13 @@ class RedminePlugin < Plugin
 				# Save an issue
 				if ! resulted_task.save
 					# on indique à l'utilisateur
-					@bot.say m.replyto, "#{certificate[:username]},  la tâche ##{resulted_task.id} n'a pas été mise à jour (problèmes lors de l'enregistrement)"
+					@bot.say m.replyto, "#{certificate[:username]}, #{@redmine_l_thetask} ##{resulted_task.id} #{@redmine_l_hasnotbeenupdated}"
 				else 
 					# on indique à l'utilisateur
-					@bot.say m.replyto, "#{certificate[:username]},  la tâche ##{resulted_task.id} a été mise à jour=> #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task.id}"
+					@bot.say m.replyto, "#{certificate[:username]}, #{@redmine_l_thetask} ##{resulted_task.id} #{@redmine_l_hasbeenupdated} => #{@redmine_rapid_url}#{@redmine_issue_show_path}/#{resulted_task.id}"
 				end
 			else
-				m.reply "La tâche ##{params[:task]} n'existe pas dans Redmine"
+				m.reply "#{@redmine_l_thetask} ##{params[:task]} #{@redmine_l_doesnotexistsinredmine}"
 			end
 		end
     rescue Exception => e
@@ -755,7 +852,7 @@ class RedminePlugin < Plugin
      	if params[:message]
      		messageEntry = params[:message].to_s.strip
      	else
-     		messageEntry =  "Mis à jour par Webservice"
+     		messageEntry =  "#{@redmine_l_defaultcommentmessage}"
      	end 
 		## Save a new time entry
 		# Configuration of the connector
@@ -790,9 +887,9 @@ class RedminePlugin < Plugin
 					# on efface la tache enregistrée
 					@registry.delete "#{params[:username]}_auth"
 					# on informe l'utilisateur
-					@bot.say m.replyto, "Utilisateur #{Bold}#{params[:username]}#{Bold} supprimé"
+					@bot.say m.replyto, "#{@redmine_l_user} #{Bold}#{params[:username]}#{Bold} #{@redmine_l_erased}"
 				else
-					@bot.say m.replyto, "Je n'ai aucune donnée sur cet utilisateur"
+					@bot.say m.replyto, "#{@redmine_l_ihavenodataonthisuser}"
 				end
 				if ! redmine_username.empty?
 					if @registry.has_key? redmine_username
@@ -813,17 +910,17 @@ class RedminePlugin < Plugin
 								real_hours = ( Time.now - task_logger.time + task_logger.alreadydone)/3600
 							end
 								# affichage d'un message
-								m.reply "Les temps enregistrés pour la tâche ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; étaient :  #{hours}h #{mins}min et #{secs} secondes soit #{real_hours}h (décimal)"
+								m.reply "#{@redmine_l_timesavedforthistask} ##{task_logger.task}[#{task_logger.time.strftime('%H:%M')}]; #{@redmine_l_were} :  #{hours}h #{mins}min, #{secs}secs"
 						end
 						# on indique à l'utilisateur
-						@bot.say m.replyto, "-> Tâche effacée"
+						@bot.say m.replyto, "-> #{@redmine_l_taskerased}"
 						# on efface la tache enregistrée
 						@registry.delete redmine_username
 
 					end
 				end
 			else 
-				m.reply "Tu ne dispose pas des droits nécessaires"
+				m.reply "#{@redmine_l_youhavenottherights}"
 			end
 		end
     rescue Exception => e
@@ -928,10 +1025,10 @@ plugin.map 'force task :othername',
   
 plugin.map 'redmine start :task_to_start *message',
   :action => 'redmine_start_stop',
-  :defaults => {:message => "Mis à jour par Webservice"}
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
 plugin.map 'start :task_to_start *message',
   :action => 'redmine_start_stop',
-  :defaults => {:message => "Mis à jour par Webservice"}
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
   
 plugin.map 'pause',
   :action => 'redmine_pause'
@@ -940,21 +1037,21 @@ plugin.map 'clope',
   
 plugin.map 'redmine stop *message',
   :action => 'redmine_counter_stop',
-  :defaults => {:message => "Mis à jour par Webservice"}
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
 plugin.map 'stop *message',
   :action => 'redmine_counter_stop',
-  :defaults => {:message => "Mis à jour par Webservice"}
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
   
 plugin.map 'force stop :othername *message',
   :action => 'redmine_force_stop',
-  :defaults => {:message => "Mis à jour par Webservice"} 
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"} 
 
 plugin.map 'redmine addtime :task :hours *message',
   :action => 'redmine_add_time',
-  :defaults => {:message => "Mis à jour par Webservice"}
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
 plugin.map 'addtime :task :hours *message',
   :action => 'redmine_add_time',
-  :defaults => {:message => "Mis à jour par Webservice"}
+  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
   
 plugin.map 'redmine comment :task *message',
   :action => 'redmine_add_comment'
