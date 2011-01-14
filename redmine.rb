@@ -57,7 +57,7 @@ class RedminePlugin < Plugin
     @redmine_webservice_default_user = "yohann"
     @redmine_webservice_default_pass = "monnier"
 
-		@redmine_rbot_language = "EN" # or FR
+	@redmine_rbot_language = "EN" # or FR
 
     # Other variables - should not be changed
     @redmine_issue_show_path = "issues/show"
@@ -65,9 +65,8 @@ class RedminePlugin < Plugin
     @rbot_connector_version = "0.9.2"
     @redmine_rapid_url = @redmine_url_prefixe + @redmine_url_suffixe
     @redmine_counter_hour_limit = 12
-		@redmine_dev_activity = 9 
+	@redmine_dev_activity = 9 
     @redmine_debug_mode = 0
-		
 		# language
 		if @redmine_rbot_language == "FR"
 		
@@ -849,7 +848,7 @@ class RedminePlugin < Plugin
   def redmine_add_time_entry(m, params, certificate)
     begin
      	#Initialisation des paramètres
-     	if params[:message]
+     	if (params[:message] &&  !params[:message].empty?)
      		messageEntry = params[:message].to_s.strip
      	else
      		messageEntry =  "#{@redmine_l_defaultcommentmessage}"
@@ -967,7 +966,16 @@ class RedminePlugin < Plugin
 		@bot.say m.replyto, "..."
 		@bot.say m.replyto, " = 42 !"
   end 
-  
+
+   # Fonction cachée 42 pour rire
+  def forty_two_answer(m, params)
+  	# Raccourci pour appel de fonction non configuré
+		@bot.say m.replyto, "42 ?"
+		@bot.say m.replyto, "..."
+		@bot.say m.replyto, "..."
+		@bot.say m.replyto, "..."
+		@bot.say m.replyto, " = the answer to life the universe and everything !"
+  end 
 
 end
 
@@ -1025,10 +1033,10 @@ plugin.map 'force task :othername',
   
 plugin.map 'redmine start :task_to_start *message',
   :action => 'redmine_start_stop',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
+  :defaults => {:message => ""}
 plugin.map 'start :task_to_start *message',
   :action => 'redmine_start_stop',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
+  :defaults => {:message => ""}
   
 plugin.map 'pause',
   :action => 'redmine_pause'
@@ -1037,21 +1045,21 @@ plugin.map 'clope',
   
 plugin.map 'redmine stop *message',
   :action => 'redmine_counter_stop',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
+  :defaults => {:message => ""}
 plugin.map 'stop *message',
   :action => 'redmine_counter_stop',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
+  :defaults => {:message => ""}
   
 plugin.map 'force stop :othername *message',
   :action => 'redmine_force_stop',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"} 
+  :defaults => {:message => ""} 
 
 plugin.map 'redmine addtime :task :hours *message',
   :action => 'redmine_add_time',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
+  :defaults => {:message => ""}
 plugin.map 'addtime :task :hours *message',
   :action => 'redmine_add_time',
-  :defaults => {:message => "#{@redmine_l_defaultcommentmessage}"}
+  :defaults => {:message => ""}
   
 plugin.map 'redmine comment :task *message',
   :action => 'redmine_add_comment'
@@ -1073,3 +1081,5 @@ plugin.map 'kill :username',
   
 plugin.map 'the answer to life the universe and everything',
   :action => 'answer_forty_two'
+plugin.map '42',
+  :action => 'forty_two_answer'
